@@ -1,0 +1,35 @@
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QLabel
+from PySide6.QtCore import Qt
+
+class EditServiceNameDialog(QDialog):
+    def __init__(self, current_name="", parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Edit Service Name")
+        self.setModal(True)
+        self.setFixedSize(300, 120)
+
+        self.layout = QVBoxLayout(self)
+
+        # Name input
+        self.name_label = QLabel("New Service Name:")
+        self.name_input = QLineEdit()
+        self.name_input.setText(current_name)
+        self.layout.addWidget(self.name_label)
+        self.layout.addWidget(self.name_input)
+
+        # Buttons
+        self.button_layout = QHBoxLayout()
+        self.save_button = QPushButton("Save")
+        self.save_button.clicked.connect(self.accept)
+        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button.clicked.connect(self.reject)
+
+        self.button_layout.addStretch()
+        self.button_layout.addWidget(self.save_button)
+        self.button_layout.addWidget(self.cancel_button)
+        self.button_layout.addStretch()
+
+        self.layout.addLayout(self.button_layout)
+
+    def get_new_name(self):
+        return self.name_input.text().strip()

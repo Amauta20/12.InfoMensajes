@@ -1,0 +1,6 @@
+PySide6
+cryptography
+PyInstaller
+ruff
+black
+mypy
