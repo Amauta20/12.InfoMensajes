@@ -5,7 +5,7 @@ def create_default_columns():
     """Ensures the default Kanban columns exist."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    default_columns = [("Por Hacer", 0), ("En Curso", 1), ("Hecho", 2)]
+    default_columns = [("Por Hacer", 0), ("Realizadas", 1)]
     for name, position in default_columns:
         cursor.execute("INSERT OR IGNORE INTO kanban_columns (name, position) VALUES (?, ?)", (name, position))
     conn.commit()
