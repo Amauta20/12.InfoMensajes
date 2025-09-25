@@ -24,6 +24,7 @@ from app.db import notes_manager
 from app.db import kanban_manager
 from app.ui.edit_note_dialog import EditNoteDialog
 from app.ui.edit_kanban_card_dialog import EditKanbanCardDialog
+from app.ui.view_kanban_card_details_dialog import ViewKanbanCardDetailsDialog
 
 class NoteInput(QTextEdit):
     def __init__(self, parent):
@@ -96,6 +97,10 @@ class ProductivityWidget(QWidget):
         self.load_kanban_boards()
 
         self.kanban_layout.addWidget(self.kanban_columns_widget)
+
+        self.clear_completed_button = QPushButton("Clear Completed Cards")
+        self.clear_completed_button.clicked.connect(self.clear_completed_kanban_cards)
+        self.kanban_layout.addWidget(self.clear_completed_button)
 
         self.layout.addWidget(self.kanban_group_box)
 
@@ -219,10 +224,16 @@ class ProductivityWidget(QWidget):
         card_list.clear()
         cards = kanban_manager.get_cards_by_column(column_id)
         for card in cards:
-            item = QListWidgetItem(card['title'])
+            timestamp_str = f"""Created: {convert_utc_to_local(card['created_at'])}
+            Started: {convert_utc_to_local(card['started_at'])}
+            Finished: {convert_utc_to_local(card['finished_at'])}"""
+            item = QListWidgetItem(f"{card['title']}\n{timestamp_str}")
             item.setData(Qt.UserRole, card['id']) # Store card_id in item data
             item.setData(Qt.UserRole + 1, card['title']) # Store full title for filtering
             item.setData(Qt.UserRole + 2, card['description']) # Store full description for filtering
+            item.setData(Qt.UserRole + 3, card['created_at'])
+            item.setData(Qt.UserRole + 4, card['started_at'])
+            item.setData(Qt.UserRole + 5, card['finished_at'])
             card_list.addItem(item)
 
     def add_kanban_card(self, column_id, input_field):
@@ -249,12 +260,23 @@ class ProductivityWidget(QWidget):
                     action.triggered.connect(lambda checked, c_id=card_id, new_col_id=col['id']: self.move_kanban_card(c_id, new_col_id))
                     move_menu.addAction(action)
             
+            # View Details action
+            view_action = QAction("View Details", self)
+            view_action.triggered.connect(lambda checked, c_id=card_id: self.view_kanban_card_details(c_id))
+            menu.addAction(view_action)
+
             # Delete action
             delete_action = QAction("Delete Card", self)
             delete_action.triggered.connect(lambda checked, c_id=card_id: self.delete_kanban_card(c_id))
             menu.addAction(delete_action)
 
             menu.exec(list_widget.mapToGlobal(pos))
+
+    def view_kanban_card_details(self, card_id):
+        card_details = kanban_manager.get_card_details(card_id)
+        if card_details:
+            dialog = ViewKanbanCardDetailsDialog(card_details, self)
+            dialog.exec()
 
     def move_kanban_card(self, card_id, new_column_id):
         kanban_manager.move_card(card_id, new_column_id)
@@ -263,6 +285,19 @@ class ProductivityWidget(QWidget):
     def delete_kanban_card(self, card_id):
         kanban_manager.delete_card(card_id)
         self.load_kanban_boards() # Refresh all boards
+
+    def clear_completed_kanban_cards(self):
+        completed_column_id = None
+        for col in self.all_kanban_columns:
+            if col['name'] == "Realizadas":
+                completed_column_id = col['id']
+                break
+
+        if completed_column_id is not None:
+            cards_to_delete = kanban_manager.get_cards_by_column(completed_column_id)
+            for card in cards_to_delete:
+                kanban_manager.delete_card(card['id'])
+            self.load_kanban_boards() # Refresh all boards
 
     def edit_kanban_card(self, item):
         card_id = item.data(Qt.UserRole)

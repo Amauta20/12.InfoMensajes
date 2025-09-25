@@ -31,7 +31,7 @@ def create_card(column_id, title, description=None):
 def get_cards_by_column(column_id):
     """Retrieves all cards for a given Kanban column."""
     conn = get_db_connection()
-    cards = conn.execute("SELECT * FROM kanban_cards WHERE column_id = ? ORDER BY created_at", (column_id,)).fetchall()
+    cards = conn.execute("SELECT id, column_id, title, description, created_at, started_at, finished_at FROM kanban_cards WHERE column_id = ? ORDER BY created_at", (column_id,)).fetchall()
     conn.close()
     return cards
 
@@ -72,6 +72,6 @@ def update_card(card_id, new_title, new_description=None):
 def get_card_details(card_id):
     """Retrieves the details of a specific Kanban card."""
     conn = get_db_connection()
-    card = conn.execute("SELECT id, column_id, title, description FROM kanban_cards WHERE id = ?", (card_id,)).fetchone()
+    card = conn.execute("SELECT id, column_id, title, description, created_at, started_at, finished_at FROM kanban_cards WHERE id = ?", (card_id,)).fetchone()
     conn.close()
     return card
