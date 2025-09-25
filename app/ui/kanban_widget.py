@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QListWidget, QListWidgetItem, QLineEdit, QDialog, QMenu, QGroupBox, QPushButton
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QAction
+from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtGui import QAction, QColor, QFont
 
 from app.db import kanban_manager
 from app.ui.edit_kanban_card_dialog import EditKanbanCardDialog
@@ -93,7 +93,7 @@ class KanbanWidget(QWidget):
                 add_card_button.clicked.connect(lambda checked, col_id=column['id']: self.add_kanban_card(col_id))
                 column_layout.addWidget(add_card_button)
 
-            self.kanban_columns_layout.addWidget(column_widget)
+            self.kanban_columns_layout.addWidget(column_widget, 1)
             self.load_kanban_cards(column['id'], column['name'])
 
     def load_kanban_cards(self, column_id, column_name):
@@ -133,6 +133,12 @@ class KanbanWidget(QWidget):
             item.setData(Qt.UserRole + 6, card['assignee'])
             item.setData(Qt.UserRole + 7, card['due_date'])
             card_list.addItem(item)
+            item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            item.setBackground(QColor("#333333")) # Darker background for cards
+            item.setForeground(QColor("#FFFFFF")) # White text
+            item.setFont(QFont("Segoe UI", 10))
+            item.setFlags(item.flags() | Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            card_list.setStyleSheet("QListWidget::item { border-bottom: 1px solid #555555; padding: 5px; }")
 
     def add_kanban_card(self, column_id):
         dialog = AddKanbanCardDialog(self)
