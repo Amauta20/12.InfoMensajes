@@ -233,9 +233,9 @@ class ProductivityWidget(QWidget):
                 column_layout.addWidget(add_card_button)
 
             self.kanban_columns_layout.addWidget(column_widget)
-            self.load_kanban_cards(column['id'])
+            self.load_kanban_cards(column['id'], column['name'])
 
-    def load_kanban_cards(self, column_id):
+    def load_kanban_cards(self, column_id, column_name):
         card_list = self.kanban_columns[column_id]
         card_list.clear()
         cards = kanban_manager.get_cards_by_column(column_id)
@@ -243,11 +243,15 @@ class ProductivityWidget(QWidget):
             assignee_text = f"Encargado: {card['assignee']}" if card['assignee'] else ""
             due_date_text = f"Entrega: {format_timestamp_to_local_display(card['due_date'])}" if card['due_date'] else ""
             
-            item_text = (f"{card['title']}\n" 
-                         f"{assignee_text} {due_date_text}\n" 
-                         f"Creada: {format_timestamp_to_local_display(card['created_at'])}\n" 
-                         f"Iniciada: {format_timestamp_to_local_display(card['started_at'])}\n" 
-                         f"Finalizada: {format_timestamp_to_local_display(card['finished_at'])}")
+            if column_name == "Por Hacer":
+                item_text = (f"{card['title']}\n" 
+                             f"{assignee_text} {due_date_text}")
+            else:
+                item_text = (f"{card['title']}\n" 
+                             f"{assignee_text} {due_date_text}\n" 
+                             f"Creada: {format_timestamp_to_local_display(card['created_at'])}\n" 
+                             f"Iniciada: {format_timestamp_to_local_display(card['started_at'])}\n" 
+                             f"Finalizada: {format_timestamp_to_local_display(card['finished_at'])}")
             item = QListWidgetItem(item_text)
             item.setData(Qt.UserRole, card['id']) # Store card_id in item data
             item.setData(Qt.UserRole + 1, card['title']) # Store full title for filtering
