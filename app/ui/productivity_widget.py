@@ -240,15 +240,20 @@ class ProductivityWidget(QWidget):
         card_list.clear()
         cards = kanban_manager.get_cards_by_column(column_id)
         for card in cards:
-            assignee_text = f"Encargado: {card['assignee']}" if card['assignee'] else ""
-            due_date_text = f"Entrega: {format_timestamp_to_local_display(card['due_date'])}" if card['due_date'] else ""
+            assignee_value = card['assignee'] if card['assignee'] else "N/A"
+            due_date_value = format_timestamp_to_local_display(card['due_date']) if card['due_date'] else "N/A"
             
             if column_name == "Por Hacer":
                 item_text = (f"{card['title']}\n" 
-                             f"{assignee_text} {due_date_text}")
+                             f"Entregar: {assignee_value} | {due_date_value}")
+            elif column_name == "En Progreso":
+                item_text = (f"{card['title']}\n" 
+                             f"Encargado: {assignee_value}\n" 
+                             f"Entrega: {due_date_value}\n" 
+                             f"Iniciada: {format_timestamp_to_local_display(card['started_at'])}")
             else:
                 item_text = (f"{card['title']}\n" 
-                             f"{assignee_text} {due_date_text}\n" 
+                             f"Encargado: {assignee_value} {due_date_value}\n" 
                              f"Creada: {format_timestamp_to_local_display(card['created_at'])}\n" 
                              f"Iniciada: {format_timestamp_to_local_display(card['started_at'])}\n" 
                              f"Finalizada: {format_timestamp_to_local_display(card['finished_at'])}")
