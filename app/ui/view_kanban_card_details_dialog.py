@@ -16,13 +16,13 @@ class ViewKanbanCardDetailsDialog(QDialog):
         self.description_label = QLabel(f"<b>Descripción:</b> {card_details['description'] or 'N/A'}")
         self.layout.addWidget(self.description_label)
 
-        self.created_at_label = QLabel(f"<b>Creada el:</b> {convert_utc_to_local(card_details['created_at'])}")
+        self.created_at_label = QLabel(f"<b>Creada el:</b> {format_timestamp_to_local_display(card_details['created_at'])}")
         self.layout.addWidget(self.created_at_label)
 
-        self.started_at_label = QLabel(f"<b>Iniciada el:</b> {convert_utc_to_local(card_details['started_at'])}")
+        self.started_at_label = QLabel(f"<b>Iniciada el:</b> {format_timestamp_to_local_display(card_details['started_at'])}")
         self.layout.addWidget(self.started_at_label)
 
-        self.finished_at_label = QLabel(f"<b>Finalizada el:</b> {convert_utc_to_local(card_details['finished_at'])}")
+        self.finished_at_label = QLabel(f"<b>Finalizada el:</b> {format_timestamp_to_local_display(card_details['finished_at'])}")
         self.layout.addWidget(self.finished_at_label)
 
         self.assignee_label = QLabel(f"<b>Encargado:</b> {card_details['assignee'] or 'N/A'}")

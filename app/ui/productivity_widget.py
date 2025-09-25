@@ -169,7 +169,7 @@ class ProductivityWidget(QWidget):
         notes = notes_manager.get_all_notes()
         for note in notes:
             snippet = note['content'].split('\n')[0] # First line as snippet
-            timestamp = convert_utc_to_local(note['updated_at'])
+            timestamp = format_timestamp_to_local_display(note['updated_at'])
             item_text = f"{snippet} ({timestamp})"
             item = QListWidgetItem(item_text)
             item.setData(Qt.UserRole, note['id']) # Store note_id in item data
@@ -245,9 +245,9 @@ class ProductivityWidget(QWidget):
             
             item_text = (f"{card['title']}\n" 
                          f"{assignee_text} {due_date_text}\n" 
-                         f"Creada: {convert_utc_to_local(card['created_at'])}\n" 
-                         f"Iniciada: {convert_utc_to_local(card['started_at'])}\n" 
-                         f"Finalizada: {convert_utc_to_local(card['finished_at'])}")
+                         f"Creada: {format_timestamp_to_local_display(card['created_at'])}\n" 
+                         f"Iniciada: {format_timestamp_to_local_display(card['started_at'])}\n" 
+                         f"Finalizada: {format_timestamp_to_local_display(card['finished_at'])}")
             item = QListWidgetItem(item_text)
             item.setData(Qt.UserRole, card['id']) # Store card_id in item data
             item.setData(Qt.UserRole + 1, card['title']) # Store full title for filtering
