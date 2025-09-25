@@ -5,22 +5,22 @@ from urllib.parse import urlparse
 class AddServiceDialog(QDialog):
     def __init__(self, initial_name="", initial_url="", initial_icon="", parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Add New Service")
+        self.setWindowTitle("Añadir Nuevo Servicio")
         self.setModal(True)
         self.setFixedSize(300, 180)
 
         self.layout = QVBoxLayout(self)
 
         # Name input
-        self.name_label = QLabel("Service Name:")
+        self.name_label = QLabel("Nombre del Servicio:")
         self.name_input = QLineEdit()
-        self.name_input.setPlaceholderText("e.g., My Custom Chat")
+        self.name_input.setPlaceholderText("ej., Mi Chat Personalizado")
         self.name_input.setText(initial_name) # Set initial name
         self.layout.addWidget(self.name_label)
         self.layout.addWidget(self.name_input)
 
         # URL input
-        self.url_label = QLabel("Service URL:")
+        self.url_label = QLabel("URL del Servicio:")
         self.url_input = QLineEdit()
         self.url_input.setPlaceholderText("e.g., https://chat.example.com")
         self.url_input.setText(initial_url) # Set initial URL
@@ -33,9 +33,9 @@ class AddServiceDialog(QDialog):
 
         # Buttons
         self.button_layout = QHBoxLayout()
-        self.add_button = QPushButton("Add")
+        self.add_button = QPushButton("Añadir")
         self.add_button.clicked.connect(self.validate_and_accept)
-        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button = QPushButton("Cancelar")
         self.cancel_button.clicked.connect(self.reject)
 
         self.button_layout.addStretch()
@@ -50,16 +50,16 @@ class AddServiceDialog(QDialog):
         url = self.url_input.text().strip()
 
         if not name:
-            QMessageBox.warning(self, "Input Error", "Service Name cannot be empty.")
+            QMessageBox.warning(self, "Error de Entrada", "El Nombre del Servicio no puede estar vacío.")
             return
         if not url:
-            QMessageBox.warning(self, "Input Error", "Service URL cannot be empty.")
+            QMessageBox.warning(self, "Error de Entrada", "La URL del Servicio no puede estar vacía.")
             return
 
         # Basic URL validation
         parsed_url = urlparse(url)
         if not all([parsed_url.scheme, parsed_url.netloc]):
-            QMessageBox.warning(self, "Input Error", "Please enter a valid URL (e.g., https://example.com).")
+            QMessageBox.warning(self, "Error de Entrada", "Por favor, introduce una URL válida (ej., https://example.com).")
             return
 
         self.accept()

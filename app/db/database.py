@@ -57,9 +57,19 @@ def create_schema():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         started_at TIMESTAMP,
         finished_at TIMESTAMP,
+        assignee TEXT,
+        due_date TIMESTAMP,
         FOREIGN KEY (column_id) REFERENCES kanban_columns (id)
     );
     """)
+
+    # Add new columns to kanban_cards if they don't exist
+    cursor.execute("PRAGMA table_info(kanban_cards);")
+    columns = [col[1] for col in cursor.fetchall()]
+    if 'assignee' not in columns:
+        cursor.execute("ALTER TABLE kanban_cards ADD COLUMN assignee TEXT;")
+    if 'due_date' not in columns:
+        cursor.execute("ALTER TABLE kanban_cards ADD COLUMN due_date TIMESTAMP;")
 
     # FTS5 virtual table for message indexing
     cursor.execute("""

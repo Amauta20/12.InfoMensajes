@@ -30,7 +30,7 @@ class NoteInput(QTextEdit):
     def __init__(self, parent):
         super().__init__()
         self.parent_widget = parent # Reference to ProductivityWidget
-        self.setPlaceholderText("Create a new note... (Ctrl+Enter)")
+        self.setPlaceholderText("Crear nueva nota... (Ctrl+Enter)")
         self.setFixedHeight(60)
 
     def keyPressEvent(self, event):
@@ -47,19 +47,19 @@ class ProductivityWidget(QWidget):
         self.layout.setSpacing(10)
 
         # --- Notes Section ---
-        self.notes_group_box = QGroupBox("Quick Notes")
+        self.notes_group_box = QGroupBox("Notas Rápidas")
         self.notes_group_box.setStyleSheet("QGroupBox { font-size: 16px; font-weight: bold; margin-top: 1ex;} QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top center; padding: 0 3px;}")
         self.notes_layout = QVBoxLayout(self.notes_group_box)
 
         self.note_input = NoteInput(self)
         self.notes_layout.addWidget(self.note_input)
 
-        self.add_note_button = QPushButton("Add Note")
+        self.add_note_button = QPushButton("Añadir Nota")
         self.add_note_button.clicked.connect(self.add_note_from_input)
         self.notes_layout.addWidget(self.add_note_button)
 
         self.note_search_input = QLineEdit()
-        self.note_search_input.setPlaceholderText("Search notes...")
+        self.note_search_input.setPlaceholderText("Buscar notas...")
         self.note_search_input.textChanged.connect(self.filter_notes)
         self.notes_layout.addWidget(self.note_search_input)
 
@@ -75,12 +75,12 @@ class ProductivityWidget(QWidget):
         self.layout.addWidget(self.notes_group_box)
 
         # --- Kanban Section ---
-        self.kanban_group_box = QGroupBox("Kanban Board")
+        self.kanban_group_box = QGroupBox("Tablero Kanban")
         self.kanban_group_box.setStyleSheet("QGroupBox { font-size: 16px; font-weight: bold; margin-top: 1ex;} QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top center; padding: 0 3px;}")
         self.kanban_layout = QVBoxLayout(self.kanban_group_box)
 
         self.kanban_search_input = QLineEdit()
-        self.kanban_search_input.setPlaceholderText("Search Kanban cards...")
+        self.kanban_search_input.setPlaceholderText("Buscar tarjetas Kanban...")
         self.kanban_search_input.textChanged.connect(self.filter_kanban_cards)
         self.kanban_layout.addWidget(self.kanban_search_input)
 
@@ -98,7 +98,7 @@ class ProductivityWidget(QWidget):
 
         self.kanban_layout.addWidget(self.kanban_columns_widget)
 
-        self.clear_completed_button = QPushButton("Clear Completed Cards")
+        self.clear_completed_button = QPushButton("Limpiar Tarjetas Completadas")
         self.clear_completed_button.clicked.connect(self.clear_completed_kanban_cards)
         self.kanban_layout.addWidget(self.clear_completed_button)
 
@@ -136,7 +136,7 @@ class ProductivityWidget(QWidget):
             if note_id is None: return
 
             menu = QMenu(self)
-            delete_action = QAction("Delete Note", self)
+            delete_action = QAction("Eliminar Nota", self)
             delete_action.triggered.connect(lambda checked, n_id=note_id: self.delete_note_from_ui(n_id))
             menu.addAction(delete_action)
 
@@ -211,7 +211,7 @@ class ProductivityWidget(QWidget):
 
             if column['name'] == "Por Hacer": # Only allow adding to 'Por Hacer'
                 card_input = QLineEdit()
-                card_input.setPlaceholderText("Add new card...")
+                card_input.setPlaceholderText("Añadir nueva tarjeta...")
                 card_input.returnPressed.connect(lambda col_id=column['id'], input_field=card_input: self.add_kanban_card(col_id, input_field))
                 column_layout.addWidget(card_input)
                 self.kanban_card_inputs[column['id']] = card_input
@@ -224,16 +224,23 @@ class ProductivityWidget(QWidget):
         card_list.clear()
         cards = kanban_manager.get_cards_by_column(column_id)
         for card in cards:
-            timestamp_str = f"""Created: {convert_utc_to_local(card['created_at'])}
-            Started: {convert_utc_to_local(card['started_at'])}
-            Finished: {convert_utc_to_local(card['finished_at'])}"""
-            item = QListWidgetItem(f"{card['title']}\n{timestamp_str}")
+            assignee_text = f"Encargado: {card['assignee']}" if card['assignee'] else ""
+            due_date_text = f"Entrega: {convert_utc_to_local(card['due_date'])}" if card['due_date'] else ""
+            
+            item_text = (f"{card['title']}\n" 
+                         f"{assignee_text} {due_date_text}\n" 
+                         f"Creada: {convert_utc_to_local(card['created_at'])}\n" 
+                         f"Iniciada: {convert_utc_to_local(card['started_at'])}\n" 
+                         f"Finalizada: {convert_utc_to_local(card['finished_at'])}")
+            item = QListWidgetItem(item_text)
             item.setData(Qt.UserRole, card['id']) # Store card_id in item data
             item.setData(Qt.UserRole + 1, card['title']) # Store full title for filtering
             item.setData(Qt.UserRole + 2, card['description']) # Store full description for filtering
             item.setData(Qt.UserRole + 3, card['created_at'])
             item.setData(Qt.UserRole + 4, card['started_at'])
             item.setData(Qt.UserRole + 5, card['finished_at'])
+            item.setData(Qt.UserRole + 6, card['assignee'])
+            item.setData(Qt.UserRole + 7, card['due_date'])
             card_list.addItem(item)
 
     def add_kanban_card(self, column_id, input_field):
@@ -253,7 +260,7 @@ class ProductivityWidget(QWidget):
             menu = QMenu(self)
 
             # Move actions
-            move_menu = menu.addMenu("Move to...")
+            move_menu = menu.addMenu("Mover a...")
             for col in self.all_kanban_columns:
                 if col['id'] != current_column_id:
                     action = QAction(col['name'], self)
@@ -261,12 +268,12 @@ class ProductivityWidget(QWidget):
                     move_menu.addAction(action)
             
             # View Details action
-            view_action = QAction("View Details", self)
+            view_action = QAction("Ver Detalles", self)
             view_action.triggered.connect(lambda checked, c_id=card_id: self.view_kanban_card_details(c_id))
             menu.addAction(view_action)
 
             # Delete action
-            delete_action = QAction("Delete Card", self)
+            delete_action = QAction("Eliminar Tarjeta", self)
             delete_action.triggered.connect(lambda checked, c_id=card_id: self.delete_kanban_card(c_id))
             menu.addAction(delete_action)
 
@@ -306,9 +313,12 @@ class ProductivityWidget(QWidget):
         card_details = kanban_manager.get_card_details(card_id)
         if not card_details: return
 
-        dialog = EditKanbanCardDialog(card_details['title'], card_details['description'], self)
+        dialog = EditKanbanCardDialog(card_details['title'], card_details['description'], card_details['assignee'], card_details['due_date'], self)
         if dialog.exec() == QDialog.Accepted:
-            new_title, new_description = dialog.get_new_data()
-            if new_title and (new_title != card_details['title'] or new_description != card_details['description']):
-                kanban_manager.update_card(card_id, new_title, new_description)
+            new_title, new_description, new_assignee, new_due_date = dialog.get_new_data()
+            if new_title and (new_title != card_details['title'] or 
+                             new_description != card_details['description'] or 
+                             new_assignee != card_details['assignee'] or 
+                             new_due_date != card_details['due_date']):
+                kanban_manager.update_card(card_id, new_title, new_description, new_assignee, new_due_date)
                 self.load_kanban_boards()

@@ -32,9 +32,9 @@ class MainWindow(QMainWindow):
         self.main_layout.setSpacing(0)
 
         # --- Header (Toolbar) ---
-        self.toolbar = self.addToolBar("Main Toolbar")
+        self.toolbar = self.addToolBar("Barra de Herramientas Principal")
         self.search_input = QLineEdit(self)
-        self.search_input.setPlaceholderText("Global Search (Notes, Kanban, Pasted Text)")
+        self.search_input.setPlaceholderText("Búsqueda Global (Notas, Kanban, Texto Pegado)")
         self.search_input.setFixedWidth(300)
         self.search_input.returnPressed.connect(self.perform_global_search)
         self.toolbar.addWidget(self.search_input)
@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
         self.search_shortcut.activated.connect(self.focus_search_bar)
 
         # Theme Toggle Button
-        self.theme_toggle_button = self.toolbar.addAction("Toggle Theme")
+        self.theme_toggle_button = self.toolbar.addAction("Cambiar Tema")
         self.theme_toggle_button.triggered.connect(self.toggle_theme)
 
         # --- Web view management ---
@@ -115,11 +115,11 @@ class MainWindow(QMainWindow):
         if self.is_dark_theme:
             QApplication.instance().setStyleSheet(light_theme_stylesheet)
             self.is_dark_theme = False
-            self.theme_toggle_button.setText("Dark Theme")
+            self.theme_toggle_button.setText("Tema Oscuro")
         else:
             QApplication.instance().setStyleSheet(dark_theme_stylesheet)
             self.is_dark_theme = True
-            self.theme_toggle_button.setText("Light Theme")
+            self.theme_toggle_button.setText("Tema Claro")
 
     def focus_search_bar(self):
         self.search_input.setFocus()

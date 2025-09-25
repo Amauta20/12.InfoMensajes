@@ -2,33 +2,48 @@ from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QTex
 from PySide6.QtCore import Qt
 
 class EditKanbanCardDialog(QDialog):
-    def __init__(self, initial_title="", initial_description="", parent=None):
+    def __init__(self, initial_title="", initial_description="", initial_assignee="", initial_due_date="", parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Edit Kanban Card")
+        self.setWindowTitle("Editar Tarjeta Kanban")
         self.setModal(True)
-        self.setFixedSize(400, 350)
+        self.setFixedSize(400, 450)
 
         self.layout = QVBoxLayout(self)
 
         # Title input
-        self.title_label = QLabel("Title:")
+        self.title_label = QLabel("Título:")
         self.title_input = QLineEdit()
         self.title_input.setText(initial_title)
         self.layout.addWidget(self.title_label)
         self.layout.addWidget(self.title_input)
 
         # Description input
-        self.description_label = QLabel("Description:")
+        self.description_label = QLabel("Descripción:")
         self.description_editor = QTextEdit()
         self.description_editor.setPlainText(initial_description)
         self.layout.addWidget(self.description_label)
         self.layout.addWidget(self.description_editor)
 
+        # Assignee input
+        self.assignee_label = QLabel("Encargado:")
+        self.assignee_input = QLineEdit()
+        self.assignee_input.setText(initial_assignee)
+        self.layout.addWidget(self.assignee_label)
+        self.layout.addWidget(self.assignee_input)
+
+        # Due Date input
+        self.due_date_label = QLabel("Fecha de Entrega (YYYY-MM-DD HH:MM:SS):")
+        self.due_date_input = QLineEdit()
+        self.due_date_input.setPlaceholderText("Opcional")
+        self.due_date_input.setText(initial_due_date)
+        self.layout.addWidget(self.due_date_label)
+        self.layout.addWidget(self.due_date_input)
+
         # Buttons
         self.button_layout = QHBoxLayout()
-        self.save_button = QPushButton("Save")
+        self.save_button = QPushButton("Guardar")
         self.save_button.clicked.connect(self.accept)
-        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button = QPushButton("Cancelar")
         self.cancel_button.clicked.connect(self.reject)
 
         self.button_layout.addStretch()
@@ -41,4 +56,6 @@ class EditKanbanCardDialog(QDialog):
     def get_new_data(self):
         new_title = self.title_input.text().strip()
         new_description = self.description_editor.toPlainText().strip()
-        return new_title, new_description
+        new_assignee = self.assignee_input.text().strip()
+        new_due_date = self.due_date_input.text().strip()
+        return new_title, new_description, new_assignee, new_due_date

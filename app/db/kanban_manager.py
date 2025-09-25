@@ -18,11 +18,11 @@ def get_all_columns():
     conn.close()
     return columns
 
-def create_card(column_id, title, description=None):
+def create_card(column_id, title, description=None, assignee=None, due_date=None):
     """Adds a new card to a specified Kanban column."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO kanban_cards (column_id, title, description) VALUES (?, ?, ?)", (column_id, title, description))
+    cursor.execute("INSERT INTO kanban_cards (column_id, title, description, assignee, due_date) VALUES (?, ?, ?, ?, ?)", (column_id, title, description, assignee, due_date))
     conn.commit()
     card_id = cursor.lastrowid
     conn.close()
@@ -31,7 +31,7 @@ def create_card(column_id, title, description=None):
 def get_cards_by_column(column_id):
     """Retrieves all cards for a given Kanban column."""
     conn = get_db_connection()
-    cards = conn.execute("SELECT id, column_id, title, description, created_at, started_at, finished_at FROM kanban_cards WHERE column_id = ? ORDER BY created_at", (column_id,)).fetchall()
+    cards = conn.execute("SELECT id, column_id, title, description, created_at, started_at, finished_at, assignee, due_date FROM kanban_cards WHERE column_id = ? ORDER BY created_at", (column_id,)).fetchall()
     conn.close()
     return cards
 
@@ -62,16 +62,16 @@ def delete_card(card_id):
     conn.commit()
     conn.close()
 
-def update_card(card_id, new_title, new_description=None):
-    """Updates the title and description of an existing Kanban card."""
+def update_card(card_id, new_title, new_description=None, new_assignee=None, new_due_date=None):
+    """Updates the title, description, assignee, and due date of an existing Kanban card."""
     conn = get_db_connection()
-    conn.execute("UPDATE kanban_cards SET title = ?, description = ? WHERE id = ?", (new_title, new_description, card_id))
+    conn.execute("UPDATE kanban_cards SET title = ?, description = ?, assignee = ?, due_date = ? WHERE id = ?", (new_title, new_description, new_assignee, new_due_date, card_id))
     conn.commit()
     conn.close()
 
 def get_card_details(card_id):
     """Retrieves the details of a specific Kanban card."""
     conn = get_db_connection()
-    card = conn.execute("SELECT id, column_id, title, description, created_at, started_at, finished_at FROM kanban_cards WHERE id = ?", (card_id,)).fetchone()
+    card = conn.execute("SELECT id, column_id, title, description, created_at, started_at, finished_at, assignee, due_date FROM kanban_cards WHERE id = ?", (card_id,)).fetchone()
     conn.close()
     return card

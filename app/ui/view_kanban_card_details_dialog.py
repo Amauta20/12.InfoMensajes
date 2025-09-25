@@ -5,25 +5,31 @@ from app.ui.productivity_widget import convert_utc_to_local
 class ViewKanbanCardDetailsDialog(QDialog):
     def __init__(self, card_details, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Kanban Card Details")
+        self.setWindowTitle("Detalles de la Tarjeta Kanban")
         self.setMinimumWidth(400)
 
         self.layout = QVBoxLayout(self)
 
-        self.title_label = QLabel(f"<b>Title:</b> {card_details['title']}")
+        self.title_label = QLabel(f"<b>Título:</b> {card_details['title']}")
         self.layout.addWidget(self.title_label)
 
-        self.description_label = QLabel(f"<b>Description:</b> {card_details['description'] or 'N/A'}")
+        self.description_label = QLabel(f"<b>Descripción:</b> {card_details['description'] or 'N/A'}")
         self.layout.addWidget(self.description_label)
 
-        self.created_at_label = QLabel(f"<b>Created At:</b> {convert_utc_to_local(card_details['created_at'])}")
+        self.created_at_label = QLabel(f"<b>Creada el:</b> {convert_utc_to_local(card_details['created_at'])}")
         self.layout.addWidget(self.created_at_label)
 
-        self.started_at_label = QLabel(f"<b>Started At:</b> {convert_utc_to_local(card_details['started_at'])}")
+        self.started_at_label = QLabel(f"<b>Iniciada el:</b> {convert_utc_to_local(card_details['started_at'])}")
         self.layout.addWidget(self.started_at_label)
 
-        self.finished_at_label = QLabel(f"<b>Finished At:</b> {convert_utc_to_local(card_details['finished_at'])}")
+        self.finished_at_label = QLabel(f"<b>Finalizada el:</b> {convert_utc_to_local(card_details['finished_at'])}")
         self.layout.addWidget(self.finished_at_label)
+
+        self.assignee_label = QLabel(f"<b>Encargado:</b> {card_details['assignee'] or 'N/A'}")
+        self.layout.addWidget(self.assignee_label)
+
+        self.due_date_label = QLabel(f"<b>Fecha de Entrega:</b> {convert_utc_to_local(card_details['due_date']) or 'N/A'}")
+        self.layout.addWidget(self.due_date_label)
 
         button_box = QDialogButtonBox(QDialogButtonBox.Ok)
         button_box.accepted.connect(self.accept)
