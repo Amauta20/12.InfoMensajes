@@ -248,9 +248,8 @@ class ProductivityWidget(QWidget):
                              f"Entregar: {assignee_value} | {due_date_value}")
             elif column_name == "En Progreso":
                 item_text = (f"{card['title']}\n" 
-                             f"Encargado: {assignee_value}\n" 
-                             f"Entrega: {due_date_value}\n" 
-                             f"Iniciada: {format_timestamp_to_local_display(card['started_at'])}")
+                             f"Entregar: {assignee_value} | {due_date_value}\n" 
+                             f"Iniciado: {format_timestamp_to_local_display(card['started_at'])}")
             else:
                 item_text = (f"{card['title']}\n" 
                              f"Encargado: {assignee_value} {due_date_value}\n" 
@@ -274,7 +273,13 @@ class ProductivityWidget(QWidget):
             title, description, assignee, due_date = dialog.get_card_data()
             if title:
                 kanban_manager.create_card(column_id, title, description, assignee, due_date)
-                self.load_kanban_cards(column_id)
+                # Find the column name to pass to load_kanban_cards
+                column_name = ""
+                for col in self.all_kanban_columns:
+                    if col['id'] == column_id:
+                        column_name = col['name']
+                        break
+                self.load_kanban_cards(column_id, column_name)
 
     def show_kanban_card_context_menu(self, pos, list_widget, current_column_id):
         item = list_widget.itemAt(pos)
