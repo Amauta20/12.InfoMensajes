@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEd
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo # Import ZoneInfo for dynamic timezone handling
 
 def convert_utc_to_local(utc_timestamp_str):
     if not utc_timestamp_str:
@@ -14,7 +15,11 @@ def convert_utc_to_local(utc_timestamp_str):
             utc_dt = datetime.strptime(utc_timestamp_str, '%Y-%m-%d %H:%M:%S')
         
         utc_dt = utc_dt.replace(tzinfo=timezone.utc)
-        local_dt = utc_dt.astimezone(timezone(timedelta(hours=-5)))
+        
+        # Get local timezone dynamically
+        local_tz = datetime.now().astimezone().tzinfo
+        local_dt = utc_dt.astimezone(local_tz)
+        
         return local_dt.strftime('%Y-%m-%d %H:%M:%S')
     except (ValueError, TypeError):
         return utc_timestamp_str # Return original string if parsing fails
@@ -273,13 +278,7 @@ class ProductivityWidget(QWidget):
             title, description, assignee, due_date = dialog.get_card_data()
             if title:
                 kanban_manager.create_card(column_id, title, description, assignee, due_date)
-                # Find the column name to pass to load_kanban_cards
-                column_name = ""
-                for col in self.all_kanban_columns:
-                    if col['id'] == column_id:
-                        column_name = col['name']
-                        break
-                self.load_kanban_cards(column_id, column_name)
+                self.load_kanban_boards() # Refresh all boards
 
     def show_kanban_card_context_menu(self, pos, list_widget, current_column_id):
         item = list_widget.itemAt(pos)
