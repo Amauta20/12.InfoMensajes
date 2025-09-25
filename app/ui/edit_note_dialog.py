@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt
 class EditNoteDialog(QDialog):
     def __init__(self, initial_content="", parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Edit Note")
+        self.setWindowTitle("Editar Nota")
         self.setModal(True)
         self.setFixedSize(400, 300)
 
@@ -16,9 +16,9 @@ class EditNoteDialog(QDialog):
 
         # Buttons
         self.button_layout = QHBoxLayout()
-        self.save_button = QPushButton("Save")
+        self.save_button = QPushButton("Guardar")
         self.save_button.clicked.connect(self.accept)
-        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button = QPushButton("Cancelar")
         self.cancel_button.clicked.connect(self.reject)
 
         self.button_layout.addStretch()

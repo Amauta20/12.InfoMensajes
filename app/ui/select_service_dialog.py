@@ -9,13 +9,13 @@ class SelectServiceDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Add Service")
+        self.setWindowTitle("Añadir Servicio")
         self.setModal(True)
         self.setFixedSize(400, 500)
 
         self.layout = QVBoxLayout(self)
 
-        self.title_label = QLabel("Choose a Service or Add Custom")
+        self.title_label = QLabel("Elige un Servicio o Añade Personalizado")
         self.title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
         self.layout.addWidget(self.title_label)
 
@@ -27,16 +27,16 @@ class SelectServiceDialog(QDialog):
         self.load_catalog_services()
 
         # Custom Service Button
-        self.custom_button = QPushButton("Add Custom URL Service")
+        self.custom_button = QPushButton("Añadir Servicio URL Personalizado")
         self.custom_button.clicked.connect(self.custom_service_requested.emit)
         self.custom_button.clicked.connect(self.accept) # Close this dialog after emitting
         self.layout.addWidget(self.custom_button)
 
         # Action Buttons
         self.button_layout = QHBoxLayout()
-        self.select_button = QPushButton("Select")
+        self.select_button = QPushButton("Seleccionar")
         self.select_button.clicked.connect(self._on_select_button_clicked)
-        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button = QPushButton("Cancelar")
         self.cancel_button.clicked.connect(self.reject)
 
         self.button_layout.addStretch()

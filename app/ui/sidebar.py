@@ -18,10 +18,10 @@ class Sidebar(QWidget):
         self.layout.setSpacing(5)
 
         # --- Services Section ---
-        self.services_title = QLabel("Services")
+        self.services_title = QLabel("Servicios")
         self.layout.addWidget(self.services_title)
 
-        self.add_service_button = QPushButton("Add Service")
+        self.add_service_button = QPushButton("Añadir Servicio")
         self.add_service_button.clicked.connect(self.open_select_service_dialog)
         self.layout.addWidget(self.add_service_button)
 
@@ -30,7 +30,7 @@ class Sidebar(QWidget):
         self.layout.addStretch() # Push services to top
 
         # --- Productivity Tools Button ---
-        self.productivity_button = QPushButton("Productivity")
+        self.productivity_button = QPushButton("Productividad")
         self.productivity_button.clicked.connect(self.show_productivity_requested.emit)
         self.layout.addWidget(self.productivity_button)
 
@@ -87,15 +87,15 @@ class Sidebar(QWidget):
 
         menu = QMenu(self)
 
-        add_instance_action = QAction("Add Another Instance", self)
+        add_instance_action = QAction("Añadir Otra Instancia", self)
         add_instance_action.triggered.connect(lambda checked, s_id=service_id: self.add_another_instance_from_ui(s_id))
         menu.addAction(add_instance_action)
 
-        edit_action = QAction("Edit Service Name", self)
+        edit_action = QAction("Editar Nombre del Servicio", self)
         edit_action.triggered.connect(lambda checked, s_id=service_id: self.edit_service_name_from_ui(s_id))
         menu.addAction(edit_action)
 
-        delete_action = QAction("Delete Service", self)
+        delete_action = QAction("Eliminar Servicio", self)
         delete_action.triggered.connect(lambda checked, s_id=service_id: self.delete_service_from_ui(s_id))
         menu.addAction(delete_action)
 
@@ -105,7 +105,7 @@ class Sidebar(QWidget):
         service_details = service_manager.get_service_by_id(service_id)
         if not service_details: return
 
-        suggested_name = f"{service_details['name']} (New Instance)"
+        suggested_name = f"{service_details['name']} (Nueva Instancia)"
         dialog = AddServiceDialog(suggested_name, service_details['url'], service_details['icon'], self)
         if dialog.exec() == QDialog.Accepted:
             name, url, icon = dialog.get_service_data()

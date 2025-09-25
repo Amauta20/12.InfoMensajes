@@ -8,7 +8,7 @@ class SearchResultsWidget(QWidget):
         self.layout.setContentsMargins(10, 10, 10, 10)
         self.layout.setSpacing(5)
 
-        self.title_label = QLabel("Search Results")
+        self.title_label = QLabel("Resultados de Búsqueda")
         self.title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
         self.layout.addWidget(self.title_label)
 
@@ -17,20 +17,20 @@ class SearchResultsWidget(QWidget):
 
     def display_results(self, results, query):
         self.results_list.clear()
-        self.title_label.setText(f"Search Results for: \"{query}\"")
+        self.title_label.setText(f"Resultados de Búsqueda para: \"{query}\"")
 
         if not results:
-            self.results_list.addItem("No results found.")
+            self.results_list.addItem("No se encontraron resultados.")
             return
 
         for result in results:
             item_text = ""
             if result['type'] == 'note':
-                item_text = f"Note: {result['content'][:100]}..."
+                item_text = f"Nota: {result['content'][:100]}..."
             elif result['type'] == 'kanban_card':
-                item_text = f"Kanban Card: {result['title']} - {result['description'][:100] if result['description'] else ''}..."
+                item_text = f"Tarjeta Kanban: {result['title']} - {result['description'][:100] if result['description'] else ''}..."
             elif result['type'] == 'message':
-                item_text = f"Message ({result['source']}): {result['content'][:100]}..."
+                item_text = f"Mensaje ({result['source']}): {result['content'][:100]}..."
             
             item = QListWidgetItem(item_text)
             self.results_list.addItem(item)
