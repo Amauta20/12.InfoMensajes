@@ -25,6 +25,7 @@ from app.db import kanban_manager
 from app.ui.edit_note_dialog import EditNoteDialog
 from app.ui.edit_kanban_card_dialog import EditKanbanCardDialog
 from app.ui.view_kanban_card_details_dialog import ViewKanbanCardDetailsDialog
+from app.ui.add_kanban_card_dialog import AddKanbanCardDialog
 
 class NoteInput(QTextEdit):
     def __init__(self, parent):
@@ -210,11 +211,9 @@ class ProductivityWidget(QWidget):
             self.kanban_columns[column['id']] = card_list
 
             if column['name'] == "Por Hacer": # Only allow adding to 'Por Hacer'
-                card_input = QLineEdit()
-                card_input.setPlaceholderText("Añadir nueva tarjeta...")
-                card_input.returnPressed.connect(lambda col_id=column['id'], input_field=card_input: self.add_kanban_card(col_id, input_field))
-                column_layout.addWidget(card_input)
-                self.kanban_card_inputs[column['id']] = card_input
+                add_card_button = QPushButton("Añadir Tarjeta")
+                add_card_button.clicked.connect(lambda checked, col_id=column['id']: self.add_kanban_card(col_id))
+                column_layout.addWidget(add_card_button)
 
             self.kanban_columns_layout.addWidget(column_widget)
             self.load_kanban_cards(column['id'])
@@ -243,12 +242,13 @@ class ProductivityWidget(QWidget):
             item.setData(Qt.UserRole + 7, card['due_date'])
             card_list.addItem(item)
 
-    def add_kanban_card(self, column_id, input_field):
-        title = input_field.text().strip()
-        if title:
-            kanban_manager.create_card(column_id, title)
-            input_field.clear()
-            self.load_kanban_cards(column_id)
+    def add_kanban_card(self, column_id):
+        dialog = AddKanbanCardDialog(self)
+        if dialog.exec() == QDialog.Accepted:
+            title, description, assignee, due_date = dialog.get_card_data()
+            if title:
+                kanban_manager.create_card(column_id, title, description, assignee, due_date)
+                self.load_kanban_cards(column_id)
 
     def show_kanban_card_context_menu(self, pos, list_widget, current_column_id):
         item = list_widget.itemAt(pos)
