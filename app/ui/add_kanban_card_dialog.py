@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QTextEdit, QPushButton, QLabel, QMessageBox
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QTextEdit, QPushButton, QLabel, QMessageBox, QDateTimeEdit
+from PySide6.QtCore import Qt, QDateTime
 
 class AddKanbanCardDialog(QDialog):
     def __init__(self, parent=None):
@@ -32,9 +32,11 @@ class AddKanbanCardDialog(QDialog):
         self.layout.addWidget(self.assignee_input)
 
         # Due Date input
-        self.due_date_label = QLabel("Fecha de Entrega (YYYY-MM-DD HH:MM:SS):")
-        self.due_date_input = QLineEdit()
-        self.due_date_input.setPlaceholderText("Opcional (ej. 2025-12-31 23:59:59)")
+        self.due_date_label = QLabel("Fecha de Entrega:")
+        self.due_date_input = QDateTimeEdit()
+        self.due_date_input.setCalendarPopup(True)
+        self.due_date_input.setDisplayFormat("dd/MM/yyyy HH:mm")
+        self.due_date_input.setDateTime(QDateTime.currentDateTime())
         self.layout.addWidget(self.due_date_label)
         self.layout.addWidget(self.due_date_input)
 
@@ -58,23 +60,11 @@ class AddKanbanCardDialog(QDialog):
             QMessageBox.warning(self, "Error de Entrada", "El título de la tarea no puede estar vacío.")
             return
         
-        # Basic due date validation (optional, can be enhanced)
-        due_date_str = self.due_date_input.text().strip()
-        if due_date_str:
-            try:
-                # Attempt to parse the date to ensure it's in a valid format
-                # This is a basic check, more robust validation might be needed
-                from datetime import datetime
-                datetime.strptime(due_date_str, '%Y-%m-%d %H:%M:%S')
-            except ValueError:
-                QMessageBox.warning(self, "Error de Entrada", "El formato de la fecha de entrega debe ser YYYY-MM-DD HH:MM:SS.")
-                return
-
         self.accept()
 
     def get_card_data(self):
         title = self.title_input.text().strip()
         description = self.description_editor.toPlainText().strip()
         assignee = self.assignee_input.text().strip()
-        due_date = self.due_date_input.text().strip()
+        due_date = self.due_date_input.dateTime().toString("yyyy-MM-dd HH:mm:ss")
         return title, description, assignee, due_date

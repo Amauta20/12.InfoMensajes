@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QTextEdit, QPushButton, QLabel
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QTextEdit, QPushButton, QLabel, QDateTimeEdit
+from PySide6.QtCore import Qt, QDateTime
 
 class EditKanbanCardDialog(QDialog):
     def __init__(self, initial_title="", initial_description="", initial_assignee="", initial_due_date="", parent=None):
@@ -32,10 +32,14 @@ class EditKanbanCardDialog(QDialog):
         self.layout.addWidget(self.assignee_input)
 
         # Due Date input
-        self.due_date_label = QLabel("Fecha de Entrega (YYYY-MM-DD HH:MM:SS):")
-        self.due_date_input = QLineEdit()
-        self.due_date_input.setPlaceholderText("Opcional")
-        self.due_date_input.setText(initial_due_date)
+        self.due_date_label = QLabel("Fecha de Entrega:")
+        self.due_date_input = QDateTimeEdit()
+        self.due_date_input.setCalendarPopup(True)
+        self.due_date_input.setDisplayFormat("dd/MM/yyyy HH:mm")
+        if initial_due_date:
+            self.due_date_input.setDateTime(QDateTime.fromString(initial_due_date, "yyyy-MM-dd HH:mm:ss"))
+        else:
+            self.due_date_input.setDateTime(QDateTime.currentDateTime())
         self.layout.addWidget(self.due_date_label)
         self.layout.addWidget(self.due_date_input)
 
@@ -57,5 +61,5 @@ class EditKanbanCardDialog(QDialog):
         new_title = self.title_input.text().strip()
         new_description = self.description_editor.toPlainText().strip()
         new_assignee = self.assignee_input.text().strip()
-        new_due_date = self.due_date_input.text().strip()
+        new_due_date = self.due_date_input.dateTime().toString("yyyy-MM-dd HH:mm:ss")
         return new_title, new_description, new_assignee, new_due_date

@@ -19,6 +19,23 @@ def convert_utc_to_local(utc_timestamp_str):
     except (ValueError, TypeError):
         return utc_timestamp_str # Return original string if parsing fails
 
+def format_timestamp_to_local_display(timestamp_str):
+    if not timestamp_str:
+        return "N/A"
+    try:
+        # Assuming timestamp_str is in YYYY-MM-DD HH:MM:SS format (from DB)
+        if '.' in timestamp_str:
+            dt_obj = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S.%f')
+        else:
+            dt_obj = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+        
+        # Convert to local timezone if necessary, then format
+        # For simplicity, assuming local timezone conversion is not strictly needed for display here
+        # If it is, you'd apply similar logic as convert_utc_to_local
+        return dt_obj.strftime('%d/%m/%Y %H:%M')
+    except (ValueError, TypeError):
+        return timestamp_str # Return original string if parsing fails
+
 
 from app.db import notes_manager
 from app.db import kanban_manager
@@ -224,7 +241,7 @@ class ProductivityWidget(QWidget):
         cards = kanban_manager.get_cards_by_column(column_id)
         for card in cards:
             assignee_text = f"Encargado: {card['assignee']}" if card['assignee'] else ""
-            due_date_text = f"Entrega: {convert_utc_to_local(card['due_date'])}" if card['due_date'] else ""
+            due_date_text = f"Entrega: {format_timestamp_to_local_display(card['due_date'])}" if card['due_date'] else ""
             
             item_text = (f"{card['title']}\n" 
                          f"{assignee_text} {due_date_text}\n" 

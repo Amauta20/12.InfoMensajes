@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QDialogButtonBox
 from PySide6.QtCore import Qt
-from app.ui.productivity_widget import convert_utc_to_local
+from app.ui.productivity_widget import convert_utc_to_local, format_timestamp_to_local_display
 
 class ViewKanbanCardDetailsDialog(QDialog):
     def __init__(self, card_details, parent=None):
@@ -28,7 +28,7 @@ class ViewKanbanCardDetailsDialog(QDialog):
         self.assignee_label = QLabel(f"<b>Encargado:</b> {card_details['assignee'] or 'N/A'}")
         self.layout.addWidget(self.assignee_label)
 
-        self.due_date_label = QLabel(f"<b>Fecha de Entrega:</b> {convert_utc_to_local(card_details['due_date']) or 'N/A'}")
+        self.due_date_label = QLabel(f"<b>Fecha de Entrega:</b> {format_timestamp_to_local_display(card_details['due_date']) or 'N/A'}")
         self.layout.addWidget(self.due_date_label)
 
         button_box = QDialogButtonBox(QDialogButtonBox.Ok)
