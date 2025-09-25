@@ -12,7 +12,8 @@ from app.ui.styles import dark_theme_stylesheet, light_theme_stylesheet
 from app.services import service_manager
 from app.ui.welcome_widget import WelcomeWidget
 from app.ui.add_service_dialog import AddServiceDialog # Needed for opening dialog from welcome widget
-from app.ui.productivity_widget import ProductivityWidget
+from app.ui.notes_widget import NotesWidget
+from app.ui.kanban_widget import KanbanWidget
 from app.ui.select_service_dialog import SelectServiceDialog
 
 class MainWindow(QMainWindow):
@@ -60,14 +61,17 @@ class MainWindow(QMainWindow):
         self.welcome_widget.add_service_requested.connect(self.open_add_service_dialog_from_welcome)
         self.web_view_stack.addWidget(self.welcome_widget)
 
-        # Productivity Widget
-        self.productivity_widget = ProductivityWidget()
-        self.web_view_stack.addWidget(self.productivity_widget)
+        # Notes Widget
+        self.notes_widget = NotesWidget()
+        self.web_view_stack.addWidget(self.notes_widget)
+
+        # Kanban Widget
+        self.kanban_widget = KanbanWidget()
+        self.web_view_stack.addWidget(self.kanban_widget)
 
         # Sidebar
         self.sidebar = Sidebar()
         self.sidebar.setFixedWidth(240)
-        self.sidebar.show_productivity_requested.connect(self.show_productivity_tools)
 
         # Splitter to manage sidebar and web_view_stack
         self.splitter = QSplitter(Qt.Horizontal)
@@ -80,12 +84,21 @@ class MainWindow(QMainWindow):
         # Connect signals
         self.sidebar.service_selected.connect(self.load_service)
         self.sidebar.service_deleted.connect(self.remove_webview_for_service)
+        self.sidebar.show_notes_requested.connect(self.show_notes_tools)
+        self.sidebar.show_kanban_requested.connect(self.show_kanban_tools)
 
         # Load initial service or a default page
         self.load_initial_page()
 
+    def show_notes_tools(self):
+        self.web_view_stack.setCurrentWidget(self.notes_widget)
+
+    def show_kanban_tools(self):
+        self.web_view_stack.setCurrentWidget(self.kanban_widget)
+
     def show_productivity_tools(self):
-        self.web_view_stack.setCurrentWidget(self.productivity_widget)
+        # This method is now obsolete, but kept for compatibility until sidebar is fully refactored
+        self.web_view_stack.setCurrentWidget(self.notes_widget) # Default to notes for now
 
     def trigger_add_service_dialog(self):
         self.sidebar.open_select_service_dialog()

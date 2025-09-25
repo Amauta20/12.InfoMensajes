@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QDialogButtonBox
 from PySide6.QtCore import Qt
-from app.ui.productivity_widget import convert_utc_to_local, format_timestamp_to_local_display
+from app.ui.utils import convert_utc_to_local, format_timestamp_to_local_display
 
 class ViewKanbanCardDetailsDialog(QDialog):
     def __init__(self, card_details, parent=None):

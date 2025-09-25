@@ -9,7 +9,8 @@ from app.ui.select_service_dialog import SelectServiceDialog
 class Sidebar(QWidget):
     service_selected = Signal(str, str) # Signal to emit URL and profile_path
     service_deleted = Signal(int) # Signal to emit service_id when a service is deleted
-    show_productivity_requested = Signal() # New signal to show productivity tools
+    show_notes_requested = Signal() # New signal to show NotesWidget
+    show_kanban_requested = Signal() # New signal to show KanbanWidget
 
     def __init__(self):
         super().__init__()
@@ -29,10 +30,14 @@ class Sidebar(QWidget):
 
         self.layout.addStretch() # Push services to top
 
-        # --- Productivity Tools Button ---
-        self.productivity_button = QPushButton("Productividad")
-        self.productivity_button.clicked.connect(self.show_productivity_requested.emit)
-        self.layout.addWidget(self.productivity_button)
+        # --- Productivity Tools Buttons ---
+        self.notes_button = QPushButton("Notas")
+        self.notes_button.clicked.connect(self.show_notes_requested.emit)
+        self.layout.addWidget(self.notes_button)
+
+        self.kanban_button = QPushButton("Kanban")
+        self.kanban_button.clicked.connect(self.show_kanban_requested.emit)
+        self.layout.addWidget(self.kanban_button)
 
     # --- Service Management Methods ---
     def open_select_service_dialog(self):
