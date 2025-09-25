@@ -30,14 +30,17 @@ def format_timestamp_to_local_display(timestamp_str):
     try:
         # Assuming timestamp_str is in YYYY-MM-DD HH:MM:SS format (from DB)
         if '.' in timestamp_str:
-            dt_obj = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S.%f')
+            utc_dt = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S.%f')
         else:
-            dt_obj = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+            utc_dt = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
         
-        # Convert to local timezone if necessary, then format
-        # For simplicity, assuming local timezone conversion is not strictly needed for display here
-        # If it is, you'd apply similar logic as convert_utc_to_local
-        return dt_obj.strftime('%d/%m/%Y %H:%M')
+        utc_dt = utc_dt.replace(tzinfo=timezone.utc)
+        
+        # Get local timezone dynamically
+        local_tz = datetime.now().astimezone().tzinfo
+        local_dt = utc_dt.astimezone(local_tz)
+        
+        return local_dt.strftime('%d/%m/%Y %H:%M')
     except (ValueError, TypeError):
         return timestamp_str # Return original string if parsing fails
 
