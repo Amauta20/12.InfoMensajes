@@ -5,7 +5,7 @@ def create_default_columns():
     """Ensures the default Kanban columns exist."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    default_columns = [("Por Hacer", 0), ("Realizadas", 1)]
+    default_columns = [("Por Hacer", 0), ("En Progreso", 1), ("Realizadas", 2)]
     for name, position in default_columns:
         cursor.execute("INSERT OR IGNORE INTO kanban_columns (name, position) VALUES (?, ?)", (name, position))
     conn.commit()
@@ -36,9 +36,22 @@ def get_cards_by_column(column_id):
     return cards
 
 def move_card(card_id, new_column_id):
-    """Moves a card to a new Kanban column."""
+    """Moves a card to a new Kanban column and updates timestamps."""
     conn = get_db_connection()
-    conn.execute("UPDATE kanban_cards SET column_id = ? WHERE id = ?", (new_column_id, card_id))
+    cursor = conn.cursor()
+
+    # Get the name of the new column
+    cursor.execute("SELECT name FROM kanban_columns WHERE id = ?", (new_column_id,))
+    column_name = cursor.fetchone()['name']
+
+    # Update timestamps based on the column name
+    if column_name == "En Progreso":
+        cursor.execute("UPDATE kanban_cards SET column_id = ?, started_at = CURRENT_TIMESTAMP WHERE id = ?", (new_column_id, card_id))
+    elif column_name == "Realizadas":
+        cursor.execute("UPDATE kanban_cards SET column_id = ?, finished_at = CURRENT_TIMESTAMP WHERE id = ?", (new_column_id, card_id))
+    else:
+        cursor.execute("UPDATE kanban_cards SET column_id = ? WHERE id = ?", (new_column_id, card_id))
+    
     conn.commit()
     conn.close()
 

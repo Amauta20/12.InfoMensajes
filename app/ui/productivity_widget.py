@@ -1,8 +1,24 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QListWidget, QListWidgetItem, QLineEdit, QDialog, QMenu, QGroupBox, QPushButton
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction
-from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtCore import QUrl
+from datetime import datetime, timezone, timedelta
+
+def convert_utc_to_local(utc_timestamp_str):
+    if not utc_timestamp_str:
+        return "N/A"
+    try:
+        # Handle multiple possible formats, including with milliseconds
+        if '.' in utc_timestamp_str:
+            utc_dt = datetime.strptime(utc_timestamp_str, '%Y-%m-%d %H:%M:%S.%f')
+        else:
+            utc_dt = datetime.strptime(utc_timestamp_str, '%Y-%m-%d %H:%M:%S')
+        
+        utc_dt = utc_dt.replace(tzinfo=timezone.utc)
+        local_dt = utc_dt.astimezone(timezone(timedelta(hours=-5)))
+        return local_dt.strftime('%Y-%m-%d %H:%M:%S')
+    except (ValueError, TypeError):
+        return utc_timestamp_str # Return original string if parsing fails
+
 
 from app.db import notes_manager
 from app.db import kanban_manager
@@ -83,17 +99,7 @@ class ProductivityWidget(QWidget):
 
         self.layout.addWidget(self.kanban_group_box)
 
-        # --- Calendar Section ---
-        self.calendar_group_box = QGroupBox("Calendar")
-        self.calendar_group_box.setStyleSheet("QGroupBox { font-size: 16px; font-weight: bold; margin-top: 1ex;} QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top center; padding: 0 3px;}")
-        self.calendar_layout = QVBoxLayout(self.calendar_group_box)
 
-        self.calendar_view = QWebEngineView()
-        self.calendar_view.setUrl(QUrl("https://calendar.google.com")) # Default to Google Calendar
-        self.calendar_view.setMinimumHeight(400)
-        self.calendar_layout.addWidget(self.calendar_view)
-
-        self.layout.addWidget(self.calendar_group_box)
 
         self.layout.addStretch() # Push content to top
 
@@ -107,12 +113,12 @@ class ProductivityWidget(QWidget):
     # --- Note Management Methods ---
     def edit_note(self, item):
         note_id = item.data(Qt.UserRole)
-        current_content = item.text()
+        original_content = item.data(Qt.UserRole + 1)
 
-        dialog = EditNoteDialog(current_content, self)
+        dialog = EditNoteDialog(original_content, self)
         if dialog.exec() == QDialog.Accepted:
             new_content = dialog.get_new_content()
-            if new_content and new_content != current_content:
+            if new_content and new_content != original_content:
                 notes_manager.update_note(note_id, new_content)
                 self.load_notes()
 
@@ -140,11 +146,11 @@ class ProductivityWidget(QWidget):
         notes = notes_manager.get_all_notes()
         for note in notes:
             snippet = note['content'].split('\n')[0] # First line as snippet
-            timestamp = note['updated_at']
-            item_text = f"{snippet} ({timestamp[:16]})" # Show YYYY-MM-DD HH:MM
+            timestamp = convert_utc_to_local(note['updated_at'])
+            item_text = f"{snippet} ({timestamp})"
             item = QListWidgetItem(item_text)
             item.setData(Qt.UserRole, note['id']) # Store note_id in item data
-            item.setData(Qt.UserRole + 1, note['content']) # Store full content for filtering
+            item.setData(Qt.UserRole + 1, note['content']) # Store full content for editing and filtering
             self.notes_list.addItem(item)
 
     def filter_notes(self, text):
@@ -193,7 +199,7 @@ class ProductivityWidget(QWidget):
             card_list = QListWidget()
             card_list.setMinimumHeight(100)
             card_list.setContextMenuPolicy(Qt.CustomContextMenu)
-            card_list.customContextMenuRequested.connect(lambda pos, col_id=column['id']: self.show_kanban_card_context_menu(pos, col_id))
+            card_list.customContextMenuRequested.connect(lambda pos, cl=card_list, col_id=column['id']: self.show_kanban_card_context_menu(pos, cl, col_id))
             card_list.itemDoubleClicked.connect(self.edit_kanban_card)
             column_layout.addWidget(card_list)
             self.kanban_columns[column['id']] = card_list
@@ -226,8 +232,7 @@ class ProductivityWidget(QWidget):
             input_field.clear()
             self.load_kanban_cards(column_id)
 
-    def show_kanban_card_context_menu(self, pos, current_column_id):
-        list_widget = self.sender() # The QListWidget that sent the signal
+    def show_kanban_card_context_menu(self, pos, list_widget, current_column_id):
         item = list_widget.itemAt(pos)
 
         if item:

@@ -16,18 +16,19 @@ def search_all(query):
     """Searches across notes, kanban cards, and the messages_index FTS5 table."""
     conn = get_db_connection()
     results = []
+    like_query = f"%{query}%"
 
     # Search notes
     notes = conn.execute(
-        "SELECT 'note' as type, id, content FROM notes WHERE content MATCH ?",
-        (query,)
+        "SELECT 'note' as type, id, content FROM notes WHERE content LIKE ?",
+        (like_query,)
     ).fetchall()
     results.extend(notes)
 
     # Search kanban cards (title and description)
     kanban_cards = conn.execute(
-        "SELECT 'kanban_card' as type, id, title, description FROM kanban_cards WHERE title MATCH ? OR description MATCH ?",
-        (query, query)
+        "SELECT 'kanban_card' as type, id, title, description FROM kanban_cards WHERE title LIKE ? OR description LIKE ?",
+        (like_query, like_query)
     ).fetchall()
     results.extend(kanban_cards)
 

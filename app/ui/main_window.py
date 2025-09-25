@@ -23,12 +23,7 @@ class MainWindow(QMainWindow):
 
         self.is_dark_theme = True # Initial state
 
-        # --- Menu Bar ---
-        self.menu_bar = self.menuBar()
-        self.file_menu = self.menu_bar.addMenu("&File")
 
-        self.add_service_action = self.file_menu.addAction("&Add Service...")
-        self.add_service_action.triggered.connect(self.trigger_add_service_dialog)
 
         # Main layout
         self.central_widget = QWidget()

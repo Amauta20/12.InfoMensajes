@@ -1,3 +1,5 @@
-2025/09/24-14:43:18.461 2d50 Reusing MANIFEST C:\Python\12.InfoMensajes\profiles\service_whatsapp\Local Storage\leveldb/MANIFEST-000001
-2025/09/24-14:43:18.473 2d50 Recovering log #4
-2025/09/24-14:43:18.474 2d50 Reusing old log C:\Python\12.InfoMensajes\profiles\service_whatsapp\Local Storage\leveldb/000004.log 
+2025/09/25-10:51:16.072 7328 Reusing MANIFEST C:\Python\12.InfoMensajes\profiles\service_whatsapp\Local Storage\leveldb/MANIFEST-000001
+2025/09/25-10:51:16.085 7328 Recovering log #4
+2025/09/25-10:51:16.086 7328 Level-0 table #6: started
+2025/09/25-10:51:16.096 7328 Level-0 table #6: 17145 bytes OK
+2025/09/25-10:51:16.099 7328 Delete type=0 #4

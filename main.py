@@ -1,5 +1,7 @@
 import sys
 import os
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
 from PySide6.QtWidgets import QApplication
 from app.ui.main_window import MainWindow
 from app.db.database import create_schema
@@ -37,6 +39,13 @@ def test_vault():
 def main():
     # Ensure the database schema is created on startup
     create_schema()
+
+    db_path = os.path.join(os.getcwd(), "infomensajero.db")
+    print(f"Checking for database at: {db_path}")
+    if os.path.exists(db_path):
+        print("Database file found.")
+    else:
+        print("Database file NOT found.")
     
     test_vault() # Run vault test
 

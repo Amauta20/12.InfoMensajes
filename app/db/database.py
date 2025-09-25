@@ -43,7 +43,7 @@ def create_schema():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS kanban_columns (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
+        name TEXT NOT NULL UNIQUE,
         position INTEGER NOT NULL
     );
     """)
@@ -55,6 +55,8 @@ def create_schema():
         title TEXT NOT NULL,
         description TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        started_at TIMESTAMP,
+        finished_at TIMESTAMP,
         FOREIGN KEY (column_id) REFERENCES kanban_columns (id)
     );
     """)
