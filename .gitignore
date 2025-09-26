@@ -5,6 +5,7 @@ __pycache__/
 
 # Database
 infomensajero.db
+infomensajero.db-*
 
 # User profiles
 profiles/
