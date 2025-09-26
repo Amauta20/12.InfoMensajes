@@ -1,15 +1,14 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
-from PySide6.QtCore import Qt, QUrl
-from PySide6.QtWebEngineWidgets import QWebEngineView
-from datetime import datetime, timedelta
 import json
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QFileDialog
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from datetime import datetime
 
 from app.db import kanban_manager
-from app.ui.utils import format_timestamp_to_local_display
 
 class GanttChartWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setWindowTitle("Diagrama de Gantt")
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(10, 10, 10, 10)
         self.layout.setSpacing(10)
@@ -21,13 +20,54 @@ class GanttChartWidget(QWidget):
         self.gantt_view = QWebEngineView()
         self.layout.addWidget(self.gantt_view)
 
+        self.export_button = QPushButton("Exportar a HTML")
+        self.export_button.clicked.connect(self.export_to_html)
+        self.layout.addWidget(self.export_button)
+        
+        self.html_content = "" 
+
         self.load_gantt_chart()
 
     def get_assignee_initials(self, assignee_name):
-        if not assignee_name: return ""
+        if not assignee_name or not isinstance(assignee_name, str):
+            return ""
         names = assignee_name.split()
         initials = [name[0].upper() for name in names if name]
-        return "".join(initials[:2]) # Take up to two initials
+        return "".join(initials[:2])
+
+    def transform_cards_to_frappe_data(self, cards):
+        frappe_data = []
+        for card in cards:
+            start_date = card.get('started_at') or card.get('created_at')
+            end_date = card.get('finished_at') or card.get('due_date')
+
+            if not start_date or not end_date:
+                continue
+
+            try:
+                start_str = datetime.fromisoformat(start_date.split('.')[0]).strftime('%Y-%m-%d')
+                end_str = datetime.fromisoformat(end_date.split('.')[0]).strftime('%Y-%m-%d')
+            except (ValueError, TypeError):
+                continue
+
+            progress = 0
+            if card['column_name'] == "En Progreso":
+                progress = 50 # Representing in-progress
+            elif card['column_name'] == "Realizadas":
+                progress = 100
+            
+            assignee_initials = self.get_assignee_initials(card.get('assignee'))
+            task_name = f"{card['title']} ({assignee_initials})" if assignee_initials else card['title']
+
+            frappe_data.append({
+                "id": str(card['id']),
+                "name": task_name,
+                "start": start_str,
+                "end": end_str,
+                "progress": progress,
+                "dependencies": ""
+            })
+        return frappe_data
 
     def load_gantt_chart(self):
         all_columns = kanban_manager.get_all_columns()
@@ -35,158 +75,130 @@ class GanttChartWidget(QWidget):
         for column in all_columns:
             cards_in_column = kanban_manager.get_cards_by_column(column['id'])
             for card_row in cards_in_column:
-                card = dict(card_row) # Convert Row to dictionary
+                card = dict(card_row)
                 card['column_name'] = column['name']
                 all_cards.append(card)
         
         if not all_cards:
-            self.gantt_view.setHtml("<h1>No hay tarjetas Kanban para mostrar en el diagrama de Gantt.</h1>")
+            self.gantt_view.setHtml("<h1>No hay tarjetas Kanban para mostrar.</h1>")
             return
 
-        # Sort cards by due date or created date
-        all_cards.sort(key=lambda x: x['due_date'] or x['created_at'])
-
-        # Determine overall date range for the chart
-        min_chart_date = datetime.max
-        max_chart_date = datetime.min
-
-        for card in all_cards:
-            start_dt = None
-            end_dt = None
-
-            if card['column_name'] == "Realizadas" and card['started_at'] and card['finished_at']:
-                start_dt = datetime.strptime(card['started_at'], '%Y-%m-%d %H:%M:%S.%f') if '.' in card['started_at'] else datetime.strptime(card['started_at'], '%Y-%m-%d %H:%M:%S')
-                end_dt = datetime.strptime(card['finished_at'], '%Y-%m-%d %H:%M:%S.%f') if '.' in card['finished_at'] else datetime.strptime(card['finished_at'], '%Y-%m-%d %H:%M:%S')
-            elif card['column_name'] == "En Progreso" and card['started_at']:
-                start_dt = datetime.strptime(card['started_at'], '%Y-%m-%d %H:%M:%S.%f') if '.' in card['started_at'] else datetime.strptime(card['started_at'], '%Y-%m-%d %H:%M:%S')
-                end_dt = datetime.now() + timedelta(days=7) # Assume 1 week more for in progress tasks
-            elif card['column_name'] == "Por Hacer" and card['due_date']:
-                start_dt = datetime.strptime(card['due_date'], '%Y-%m-%d %H:%M:%S')
-                end_dt = start_dt # Milestone
-            elif card['created_at']:
-                start_dt = datetime.strptime(card['created_at'], '%Y-%m-%d %H:%M:%S.%f') if '.' in card['created_at'] else datetime.strptime(card['created_at'], '%Y-%m-%d %H:%M:%S')
-                end_dt = start_dt + timedelta(days=1) # Default small duration
-            
-            if start_dt and start_dt < min_chart_date: min_chart_date = start_dt
-            if end_dt and end_dt > max_chart_date: max_chart_date = end_dt
-
-        if min_chart_date == datetime.max or max_chart_date == datetime.min:
-            self.gantt_view.setHtml("<h1>No se pudieron determinar las fechas para el diagrama de Gantt.</h1>")
-            return
-
-        # Extend date range for better visualization
-        min_chart_date = min_chart_date.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=7)
-        max_chart_date = max_chart_date.replace(hour=23, minute=59, second=59, microsecond=999999) + timedelta(days=7)
-
-        total_days = (max_chart_date - min_chart_date).days + 1
-        if total_days <= 0: total_days = 1 # Avoid division by zero
-
-        # Generate HTML content
-        html_rows = []
-        html_rows.append("<div class=\"gantt-header-row\">")
-        html_rows.append("<div class=\"task-details-header\">Tarea / Encargado</div>")
-        html_rows.append("<div class=\"gantt-timeline-header\">")
+        gantt_data = self.transform_cards_to_frappe_data(all_cards)
         
-        current_date = min_chart_date
-        while current_date <= max_chart_date:
-            html_rows.append(f"<div class=\"timeline-day\">{current_date.day}/{current_date.month}</div>")
-            current_date += timedelta(days=1)
-        html_rows.append("</div>")
-        html_rows.append("</div>")
+        if not gantt_data:
+            self.gantt_view.setHtml("<h1>No hay tareas con fechas válidas para generar el Gantt.</h1>")
+            return
 
-        for i, card in enumerate(all_cards):
-            row_class = "gantt-row-even" if i % 2 == 0 else "gantt-row-odd"
-            html_rows.append(f"<div class=\"gantt-row {row_class}\">")
+        tasks_json = json.dumps(gantt_data)
 
-            assignee_initials = self.get_assignee_initials(card['assignee'])
-            task_details_html = f"<div class=\"task-title\">{card['title']}</div>"
-            if assignee_initials:
-                task_details_html += f"<div class=\"assignee-initials\">({assignee_initials})</div>"
-            html_rows.append(f"<div class=\"task-details\">{task_details_html}</div>")
+        # JavaScript to force header text to white
+        js_force_white_header = """
+                    const headerTexts = document.querySelectorAll('#gantt .grid-header text');
+                    headerTexts.forEach(text => {
+                        text.setAttribute("fill", "#ffffff");
+                    });
+        """
 
-            # Gantt bar calculation
-            start_dt = None
-            end_dt = None
-            bar_color = "#6c757d" # Default grey
-
-            if card['column_name'] == "Realizadas" and card['started_at'] and card['finished_at']:
-                start_dt = datetime.strptime(card['started_at'], '%Y-%m-%d %H:%M:%S.%f') if '.' in card['started_at'] else datetime.strptime(card['started_at'], '%Y-%m-%d %H:%M:%S')
-                end_dt = datetime.strptime(card['finished_at'], '%Y-%m-%d %H:%M:%S.%f') if '.' in card['finished_at'] else datetime.strptime(card['finished_at'], '%Y-%m-%d %H:%M:%S')
-                bar_color = "#28a745" # Green for completed
-            elif card['column_name'] == "En Progreso" and card['started_at']:
-                start_dt = datetime.strptime(card['started_at'], '%Y-%m-%d %H:%M:%S.%f') if '.' in card['started_at'] else datetime.strptime(card['started_at'], '%Y-%m-%d %H:%M:%S')
-                end_dt = datetime.now() + timedelta(days=7) # Assume 1 week more for in progress tasks
-                bar_color = "#007bff" # Blue for in progress
-            elif card['column_name'] == "Por Hacer" and card['due_date']:
-                start_dt = datetime.strptime(card['due_date'], '%Y-%m-%d %H:%M:%S')
-                end_dt = start_dt # Milestone
-                bar_color = "#ffc107" # Yellow for todo
-            elif card['created_at']:
-                start_dt = datetime.strptime(card['created_at'], '%Y-%m-%d %H:%M:%S.%f') if '.' in card['created_at'] else datetime.strptime(card['created_at'], '%Y-%m-%d %H:%M:%S')
-                end_dt = start_dt + timedelta(days=1) # Default small duration
-                bar_color = "#6c757d" # Default grey
-
-            gantt_bar_html = "<div class=\"gantt-bar-container\">";
-            if start_dt and end_dt:
-                # Calculate position and width of the bar
-                start_offset_days = (start_dt - min_chart_date).days
-                end_offset_days = (end_dt - min_chart_date).days
-                duration_days = (end_dt - start_dt).days + 1
-
-                # Ensure duration is at least 1 day for visibility
-                if duration_days <= 0: duration_days = 1
-
-                # Calculate percentage for left offset and width
-                # Total timeline width is 100%
-                left_percent = (start_offset_days / total_days) * 100
-                width_percent = (duration_days / total_days) * 100
-
-                # For milestones, make it a small dot or diamond
-                if card['column_name'] == "Por Hacer" and card['due_date']:
-                    gantt_bar_html += f"<div class=\"gantt-milestone\" style=\"left: {{left_percent}}%; background-color: {{bar_color}};\"></div>"
-                else:
-                    gantt_bar_html += f"<div class=\"gantt-bar\" style=\"left: {{left_percent}}%; width: {{width_percent}}%; background-color: {{bar_color}};\"></div>"
-            gantt_bar_html += "</div>"
-            html_rows.append(f"<div class=\"gantt-chart-area\">{gantt_bar_html}</div>")
-            html_rows.append("</div>") # Close gantt-row
-
-        html_content = f"""
+        self.html_content = f"""
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Diagrama de Gantt</title>
+            <meta charset="utf-8">
+            <title>Frappe Gantt</title>
+            <script src="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.js"></script>
+            <link href="https://cdn.jsdelivr.net/npm/frappe-gantt@0.6.1/dist/frappe-gantt.min.css" rel="stylesheet">
             <style>
-                body {{ font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #2b2b2b; color: #f0f0f0; }}
-                .gantt-container {{ display: flex; flex-direction: column; width: 100%; }}
-                .gantt-header-row, .gantt-row {{ display: flex; border-bottom: 1px solid #444; }}
-                .gantt-header-row {{ background-color: #3a3a3a; font-weight: bold; }}
-                .task-details-header, .task-details {{ flex: 0 0 200px; padding: 8px; border-right: 1px solid #444; }}
-                .gantt-timeline-header, .gantt-chart-area {{ flex-grow: 1; display: flex; position: relative; }}
-                .timeline-day {{ flex-grow: 1; text-align: center; padding: 8px 0; border-right: 1px solid #444; font-size: 0.8em; color: #FFFFFF; }}
-                .timeline-day:last-child {{ border-right: none; }}
-
-                .gantt-row-even {{ background-color: #2e2e2e; }}
-                .gantt-row-odd {{ background-color: #363636; }}
-
-                .task-title {{ font-weight: bold; color: #f0f0f0; }}
-                .assignee-initials {{ font-size: 0.8em; color: #cccccc; }}
-
-                .gantt-bar-container {{ position: relative; width: 100%; height: 100%; }}
-                .gantt-bar, .gantt-milestone {{ position: absolute; height: 70%; top: 15%; border-radius: 3px; opacity: 0.8; }}
-                .gantt-bar {{ height: 70%; top: 15%; }}
-                .gantt-milestone {{ width: 10px; height: 10px; border-radius: 50%; transform: translateX(-50%); }} /* Circle for milestone */
-
-                /* Colors for bars */
-                .bar-milestone {{ background-color: #28a745; }} /* Green for completed */
-                .bar-progress {{ background-color: #007bff; }} /* Blue for in progress */
-                .bar-todo {{ background-color: #ffc107; }} /* Yellow for todo */
+                body {{
+                    background-color: #2c2c2c;
+                    color: #e0e0e0;
+                    font-family: 'Segoe UI', Roboto, sans-serif;
+                }}
+                .gantt .grid-background {{
+                    fill: #2c2c2c;
+                }}
+                .gantt .grid-header, .gantt .grid-row {{
+                    fill: #555555;
+                }}
+                .gantt .upper-text, .gantt .lower-text {{
+                    fill: #ffffff !important;
+                }}
+                .gantt .grid-row:nth-child(even) {{
+                    fill: #333333;
+                }}
+                .gantt .row-line, .gantt .grid-header .row-line {{
+                     stroke: #4a4a4a;
+                }}
+                .gantt .tick {{
+                    stroke: #666666;
+                }}
+                .gantt .task-name {{
+                    min-width: 350px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }}
+                .gantt .task-name .bar-label, .gantt .task-name .bar-label.big {{
+                    fill: #e8e8e8; 
+                    font-weight: 500;
+                }}
+                .gantt .bar-wrapper:hover {{
+                    opacity: 0.8;
+                    cursor: pointer;
+                }}
+                .gantt .bar-progress {{
+                    fill-opacity: 0.85;
+                }}
+                /* New Professional Color Palette */
+                .gantt .bar[data-progress='100'] .bar-progress {{
+                    fill: #4CAF50; /* Completed: A calm, positive green */
+                }}
+                .gantt .bar[data-progress='0'] .bar-progress {{
+                    fill: #B0BEC5; /* To Do: A neutral, soft gray */
+                }}
+                .gantt .bar[data-progress='50'] .bar-progress {{
+                    fill: #2196F3; /* In Progress: A clear, professional blue */
+                }}
             </style>
         </head>
         <body>
-            <div class="gantt-container">
-                {''.join(html_rows)}
-            </div>
+            <svg id="gantt"></svg>
+            <script>
+                var tasks = {tasks_json};
+                if (tasks.length > 0) {{
+                    var gantt = new Gantt("#gantt", tasks, {{
+                        header_height: 60,
+                        column_width: 350,
+                        step: 24,
+                        view_modes: ['Day', 'Week', 'Month'],
+                        bar_height: 24,
+                        bar_corner_radius: 4,
+                        padding: 20,
+                        view_mode: 'Day',
+                        language: 'es',
+                        custom_popup_html: function(task) {{
+                            return '<div class="details-container" style="padding:10px; background-color:#222; color: #fff; border-radius: 4px;">' +
+                                '<h5>' + task.name + '</h5>' +
+                                '<p>Inicio: ' + task._start.toLocaleDateString() + '</p>' +
+                                '<p>Fin: ' + task._end.toLocaleDateString() + '</p>' +
+                                '<p>Progreso: ' + task.progress + '%</p>' +
+                            '</div>';
+                        }}
+                    }});
+
+                }} else {{
+                    document.getElementById('gantt').innerHTML = '<p style="text-align:center; margin-top: 50px;">No hay tareas para mostrar.</p>';
+                }}
+            </script>
         </body>
         </html>
         """
-        self.gantt_view.setHtml(html_content)
+        self.gantt_view.setHtml(self.html_content)
+
+    def export_to_html(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, "Guardar Gantt como HTML", "", "HTML Files (*.html)")
+        if file_path:
+            try:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(self.html_content)
+            except Exception as e:
+                print(f"Error saving HTML file: {e}")

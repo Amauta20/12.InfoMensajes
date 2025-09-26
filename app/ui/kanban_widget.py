@@ -7,6 +7,7 @@ from app.ui.edit_kanban_card_dialog import EditKanbanCardDialog
 from app.ui.view_kanban_card_details_dialog import ViewKanbanCardDetailsDialog
 from app.ui.add_kanban_card_dialog import AddKanbanCardDialog
 from app.ui.utils import format_timestamp_to_local_display
+from app.ui.gantt_chart_widget import GanttChartWidget
 
 class KanbanWidget(QWidget):
     def __init__(self, parent=None):
@@ -39,13 +40,23 @@ class KanbanWidget(QWidget):
 
         self.kanban_layout.addWidget(self.kanban_columns_widget)
 
+        self.buttons_layout = QHBoxLayout()
         self.clear_completed_button = QPushButton("Limpiar Tarjetas Completadas")
         self.clear_completed_button.clicked.connect(self.clear_completed_kanban_cards)
-        self.kanban_layout.addWidget(self.clear_completed_button)
+        self.buttons_layout.addWidget(self.clear_completed_button)
+
+        self.gantt_button = QPushButton("Ver Gantt")
+        self.gantt_button.clicked.connect(self.open_gantt_chart)
+        self.buttons_layout.addWidget(self.gantt_button)
+        self.kanban_layout.addLayout(self.buttons_layout)
 
         self.layout.addWidget(self.kanban_group_box)
 
         self.layout.addStretch() # Push content to top
+        
+    def open_gantt_chart(self):
+        self.gantt_chart_widget = GanttChartWidget()
+        self.gantt_chart_widget.show()
 
     def filter_kanban_cards(self, text):
         search_text = text.lower()
