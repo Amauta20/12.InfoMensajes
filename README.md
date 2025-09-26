@@ -20,6 +20,12 @@ Un hub de escritorio para unificar mensajería y productividad, construido con P
 *   **Búsqueda Global**: Busca en todas tus notas y tarjetas kanban localmente con un índice FTS5.
 *   **Bóveda Segura**: Almacena API keys y otras credenciales de forma segura usando criptografía estándar (scrypt + AES-GCM).
 
+## ✨ Funcionalidades de IA
+
+*   **Resumen Inteligente**: Genera resúmenes concisos de conversaciones o documentos extensos.
+*   **Traducción Instantánea**: Traduce mensajes o textos en tiempo real dentro de la aplicación.
+*   **Atajos Avanzados**: Automatiza tareas repetitivas con comandos de voz o texto personalizados.
+
 ## 🛠️ Stack Tecnológico
 
 *   **Lenguaje**: Python 3.10+
@@ -65,7 +71,7 @@ python main.py
 ## 🗺️ Roadmap
 
 *   **Fase 1 (MVP)**: Servicios embebidos, notas, kanban, búsqueda local y bóveda de seguridad.
-*   **Fase 2**: Integración de IA (resumir, traducir), atajos avanzados y notificaciones silenciosas.
+*   **Fase 2 (Implementada)**: Integración de IA (resumir, traducir), atajos avanzados y notificaciones silenciosas.
 *   **Fase 3**: Conectores OAuth para indexación de mensajes (Gmail, Outlook, Slack).
 *   **Fase 4**: Multi-ventana, vistas divididas y reglas de concentración.
 
