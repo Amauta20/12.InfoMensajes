@@ -91,7 +91,7 @@ class GanttChartWidget(QWidget):
                 .gantt .bar-progress {{ fill: #007bff; }} /* Blue for in progress */
                 .gantt .bar-todo {{ fill: #ffc107; }} /* Yellow for todo */
                 .gantt .bar-label {{ fill: #f0f0f0; }}
-                .gantt .grid-header {{ fill: #3c3c3c; stroke: #555555; }}
+                .gantt .grid-header {{ fill: #FFFFFF; stroke: #555555; }}
                 .gantt .grid-row {{ fill: #2b2b2b; stroke: #555555; }}
                 .gantt .tick {{ stroke: #555555; }}
                 .gantt .today-highlight {{ fill: #555555; opacity: 0.5; }}
