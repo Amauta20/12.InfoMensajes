@@ -15,7 +15,8 @@ Un hub de escritorio para unificar mensajería y productividad, construido con P
 *   **Sesión Persistente**: Inicia sesión una vez y la aplicación recordará tus sesiones.
 *   **Herramientas de Productividad**:
     *   **Notas Rápidas**: Captura ideas al instante.
-    *   **Kanban**: Organiza tareas en columnas (Por Hacer, En Curso, Hecho).
+    *   **Kanban Mejorado**: Organiza tareas en columnas (Por Hacer, En Curso, Hecho) con una interfaz de usuario mejorada.
+    *   **Diagrama de Gantt Dinámico**: Visualiza tus tareas Kanban en un cronograma interactivo y profesional, con opciones de exportación a HTML.
 *   **Búsqueda Global**: Busca en todas tus notas y tarjetas kanban localmente con un índice FTS5.
 *   **Bóveda Segura**: Almacena API keys y otras credenciales de forma segura usando criptografía estándar (scrypt + AES-GCM).
 
