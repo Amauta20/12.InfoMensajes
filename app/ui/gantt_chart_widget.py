@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QScrollArea
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QListWidget, QListWidgetItem
+from PySide6.QtCore import Qt, QUrl, QSize
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from datetime import datetime, timedelta
 import json
@@ -10,20 +10,44 @@ from app.ui.utils import format_timestamp_to_local_display
 class GanttChartWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(10, 10, 10, 10)
-        self.layout.setSpacing(10)
+        self.main_layout = QHBoxLayout(self) # Main layout for split view
+        self.main_layout.setContentsMargins(10, 10, 10, 10)
+        self.main_layout.setSpacing(10)
+
+        # Left side: Task List
+        self.task_list_widget = QWidget()
+        self.task_list_layout = QVBoxLayout(self.task_list_widget)
+        self.task_list_layout.setContentsMargins(0, 0, 0, 0)
+        self.task_list_layout.setSpacing(5)
+
+        self.task_list_label = QLabel("Tareas")
+        self.task_list_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        self.task_list_layout.addWidget(self.task_list_label)
+
+        self.task_list = QListWidget()
+        self.task_list_layout.addWidget(self.task_list)
+
+        self.main_layout.addWidget(self.task_list_widget, 1) # Stretch factor 1
+
+        # Right side: Gantt Chart
+        self.gantt_chart_container = QWidget()
+        self.gantt_layout = QVBoxLayout(self.gantt_chart_container)
+        self.gantt_layout.setContentsMargins(0, 0, 0, 0)
+        self.gantt_layout.setSpacing(5)
 
         self.title_label = QLabel("Diagrama de Gantt")
         self.title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
-        self.layout.addWidget(self.title_label)
+        self.gantt_layout.addWidget(self.title_label)
 
         self.gantt_view = QWebEngineView()
-        self.layout.addWidget(self.gantt_view)
+        self.gantt_layout.addWidget(self.gantt_view)
+
+        self.main_layout.addWidget(self.gantt_chart_container, 3) # Stretch factor 3
 
         self.load_gantt_chart()
 
     def load_gantt_chart(self):
+        self.task_list.clear()
         all_columns = kanban_manager.get_all_columns()
         all_cards = []
         for column in all_columns:
@@ -35,14 +59,28 @@ class GanttChartWidget(QWidget):
         
         if not all_cards:
             self.gantt_view.setHtml("<h1>No hay tarjetas Kanban para mostrar en el diagrama de Gantt.</h1>")
+            self.task_list.addItem("No hay tareas.")
             return
+
+        # Sort cards by due date or created date
+        all_cards.sort(key=lambda x: x['due_date'] or x['created_at'])
 
         gantt_tasks = []
         for card in all_cards:
+            # Populate task list
+            assignee_name = card['assignee'] if card['assignee'] else "Sin asignar"
+            task_list_item_text = f"{card['title']} ({assignee_name})"
+            self.task_list.addItem(task_list_item_text)
+
             start_date = None
             end_date = None
             progress = 0
             custom_class = ""
+            task_type = "task"
+
+            task_name = card['title']
+            if card['assignee']:
+                task_name = f"{card['assignee']} - {task_name}"
 
             if card['column_name'] == "Realizadas":
                 if card['started_at'] and card['finished_at']:
@@ -58,23 +96,26 @@ class GanttChartWidget(QWidget):
                     custom_class = "bar-progress"
             elif card['column_name'] == "Por Hacer":
                 if card['due_date']:
-                    start_date = datetime.now() # Assume start now for planning
-                    end_date = datetime.strptime(card['due_date'], '%Y-%m-%d %H:%M:%S')
+                    start_date = datetime.strptime(card['due_date'], '%Y-%m-%d %H:%M:%S')
+                    end_date = start_date # Milestone
                     custom_class = "bar-todo"
+                    task_type = "milestone"
                 else:
                     start_date = datetime.now()
                     end_date = datetime.now() + timedelta(days=3) # Default 3 days for todo without due date
                     custom_class = "bar-todo"
+                    task_type = "task"
             
             if start_date and end_date:
                 gantt_tasks.append({
                     "id": str(card['id']),
-                    "name": card['title'],
+                    "name": task_name,
                     "start": start_date.strftime("%Y-%m-%d"),
                     "end": end_date.strftime("%Y-%m-%d"),
                     "progress": progress,
                     "dependencies": "", # Not implemented yet
-                    "custom_class": custom_class
+                    "custom_class": custom_class,
+                    "type": task_type
                 })
 
         # HTML template for the Gantt chart
