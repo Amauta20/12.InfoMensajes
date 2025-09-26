@@ -14,6 +14,7 @@ from app.ui.welcome_widget import WelcomeWidget
 from app.ui.add_service_dialog import AddServiceDialog # Needed for opening dialog from welcome widget
 from app.ui.notes_widget import NotesWidget
 from app.ui.kanban_widget import KanbanWidget
+from app.ui.gantt_chart_widget import GanttChartWidget
 from app.ui.select_service_dialog import SelectServiceDialog
 
 class MainWindow(QMainWindow):
@@ -69,6 +70,10 @@ class MainWindow(QMainWindow):
         self.kanban_widget = KanbanWidget()
         self.web_view_stack.addWidget(self.kanban_widget)
 
+        # Gantt Chart Widget
+        self.gantt_chart_widget = GanttChartWidget()
+        self.web_view_stack.addWidget(self.gantt_chart_widget)
+
         # Sidebar
         self.sidebar = Sidebar()
         self.sidebar.setFixedWidth(240)
@@ -86,6 +91,7 @@ class MainWindow(QMainWindow):
         self.sidebar.service_deleted.connect(self.remove_webview_for_service)
         self.sidebar.show_notes_requested.connect(self.show_notes_tools)
         self.sidebar.show_kanban_requested.connect(self.show_kanban_tools)
+        self.sidebar.show_gantt_chart_requested.connect(self.show_gantt_chart_tools)
 
         # Load initial service or a default page
         self.load_initial_page()
@@ -95,6 +101,10 @@ class MainWindow(QMainWindow):
 
     def show_kanban_tools(self):
         self.web_view_stack.setCurrentWidget(self.kanban_widget)
+
+    def show_gantt_chart_tools(self):
+        self.gantt_chart_widget.load_gantt_chart() # Refresh data when shown
+        self.web_view_stack.setCurrentWidget(self.gantt_chart_widget)
 
     def show_productivity_tools(self):
         # This method is now obsolete, but kept for compatibility until sidebar is fully refactored

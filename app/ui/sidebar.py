@@ -11,6 +11,7 @@ class Sidebar(QWidget):
     service_deleted = Signal(int) # Signal to emit service_id when a service is deleted
     show_notes_requested = Signal() # New signal to show NotesWidget
     show_kanban_requested = Signal() # New signal to show KanbanWidget
+    show_gantt_chart_requested = Signal() # New signal to show GanttChartWidget
 
     def __init__(self):
         super().__init__()
@@ -38,6 +39,10 @@ class Sidebar(QWidget):
         self.kanban_button = QPushButton("Kanban")
         self.kanban_button.clicked.connect(self.show_kanban_requested.emit)
         self.layout.addWidget(self.kanban_button)
+
+        self.gantt_chart_button = QPushButton("Diagrama de Gantt")
+        self.gantt_chart_button.clicked.connect(self.show_gantt_chart_requested.emit)
+        self.layout.addWidget(self.gantt_chart_button)
 
     # --- Service Management Methods ---
     def open_select_service_dialog(self):
