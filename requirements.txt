@@ -1,0 +1,7 @@
+PyQt5
+PyQtWebEngine
+cryptography
+PyInstaller
+ruff
+black
+mypy
