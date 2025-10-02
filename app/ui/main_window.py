@@ -1,9 +1,8 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QSplitter, QStackedWidget, QToolBar, QLineEdit, QApplication, QDialog, QSystemTrayIcon, QPushButton
-from PyQt5.QtCore import Qt, QUrl, QTimer, QDateTime
-from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QSplitter, QStackedWidget, QToolBar, QLineEdit, QApplication, QDialog, QSystemTrayIcon, QPushButton, QShortcut
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWebEngineWidgets import QWebEngineProfile, QWebEnginePage
+from PyQt6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QSplitter, QStackedWidget, QToolBar, QLineEdit, QDialog, QSystemTrayIcon, QPushButton
+from PyQt6.QtCore import Qt, QUrl, QTimer, QDateTime
+from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
 import os
 
 from app.ui.sidebar import Sidebar
@@ -101,9 +100,10 @@ class MainWindow(QMainWindow):
         self.sidebar.setFixedWidth(240)
 
         # Splitter to manage sidebar and web_view_stack
-        self.splitter = QSplitter(1, self)
+        self.splitter = QSplitter(Qt.Orientation.Horizontal, self)
         self.splitter.addWidget(self.sidebar)
         self.splitter.addWidget(self.web_view_stack)
+        self.splitter.setSizes([240, 1040]) # Sidebar width, main content width
 
         self.main_layout.addWidget(self.splitter)
         self.setCentralWidget(self.central_widget)
@@ -146,7 +146,7 @@ class MainWindow(QMainWindow):
         self.load_initial_page()
 
     def show_notification(self, title, message):
-        self.tray_icon.showMessage(title, message, QSystemTrayIcon.Information, 5000)
+        self.tray_icon.showMessage(title, message, QSystemTrayIcon.MessageIcon.Information, 5000)
 
     def check_for_notifications(self):
         # Get pre-notification offset
@@ -156,13 +156,13 @@ class MainWindow(QMainWindow):
         pre_due_reminders = reminders_manager.get_pre_due_reminders(pre_notification_offset_minutes)
         for reminder in pre_due_reminders:
             self.show_notification("Recordatorio Próximo", f"'{reminder['text']}' vence pronto ({reminder['due_at']})")
-            reminders_manager.update_reminder(reminder['id'], pre_notified_at=time_utils.to_utc(QDateTime.currentDateTime().toPython()).strftime("%Y-%m-%d %H:%M:%S"))
+            reminders_manager.update_reminder(reminder['id'], pre_notified_at=time_utils.to_utc(time_utils.datetime_from_qdatetime(time_utils.get_current_qdatetime())).isoformat())
 
         # Check for pre-due checklist items
         pre_due_checklist_items = checklist_manager.get_pre_due_checklist_items(pre_notification_offset_minutes)
         for item in pre_due_checklist_items:
             self.show_notification("Tarea de Checklist Próxima", f"'{item['text']}' vence pronto ({item['due_at']})")
-            checklist_manager.update_checklist_item(item['id'], pre_notified_at=time_utils.to_utc(QDateTime.currentDateTime().toPython()).strftime("%Y-%m-%d %H:%M:%S"))
+            checklist_manager.update_checklist_item(item['id'], pre_notified_at=time_utils.to_utc(time_utils.datetime_from_qdatetime(time_utils.get_current_qdatetime())).isoformat())
 
         # Check for due reminders
         due_reminders = reminders_manager.get_actual_due_reminders()
@@ -235,7 +235,7 @@ class MainWindow(QMainWindow):
                         effective_end_date = card_due_date
                     elif card_start_date:
                         effective_start_date = card_start_date
-                        effective_end_date = QDateTime.currentDateTime().toUTC().toString(Qt.ISODate)
+                        effective_end_date = QDateTime.currentDateTime().toUTC().toString(Qt.DateFormat.ISODate)
                 elif status == "completed":
                     if card_start_date and card_finished_at:
                         effective_start_date = card_start_date

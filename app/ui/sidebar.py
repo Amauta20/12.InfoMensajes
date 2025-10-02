@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QDialog, QMenu
-from PyQt5.QtCore import pyqtSignal as Signal, Qt
-from PyQt5.QtGui import QIcon
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QDialog, QMenu
+from PyQt6.QtCore import pyqtSignal as Signal, Qt
+from PyQt6.QtGui import QIcon, QAction
 from app.services import service_manager
 from app.ui.add_service_dialog import AddServiceDialog
 from app.ui.edit_service_name_dialog import EditServiceNameDialog
@@ -79,7 +79,7 @@ class Sidebar(QWidget):
 
     def _add_custom_service(self):
         dialog = AddServiceDialog(self)
-        if dialog.exec() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             name, url, icon = dialog.get_service_data()
             if name and url:
                 service_manager.add_service(name, url, icon)
@@ -97,7 +97,7 @@ class Sidebar(QWidget):
         for service in services:
             btn = QPushButton(service['name'])
             btn.setProperty('service_id', service['id']) # Store service_id in button property
-            btn.setContextMenuPolicy(Qt.CustomContextMenu)
+            btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             btn.customContextMenuRequested.connect(lambda pos, b=btn: self.show_service_context_menu(pos, b))
 
             url = service['url']
@@ -131,7 +131,7 @@ class Sidebar(QWidget):
 
         suggested_name = f"{service_details['name']} (Nueva Instancia)"
         dialog = AddServiceDialog(suggested_name, service_details['url'], service_details['icon'], self)
-        if dialog.exec() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             name, url, icon = dialog.get_service_data()
             if name and url:
                 service_manager.add_service(name, url, icon)
@@ -142,7 +142,7 @@ class Sidebar(QWidget):
         if not service_details: return
 
         dialog = EditServiceNameDialog(service_details['name'], self)
-        if dialog.exec() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             new_name = dialog.get_new_name()
             if new_name and new_name != service_details['name']:
                 service_manager.update_service_name(service_id, new_name)

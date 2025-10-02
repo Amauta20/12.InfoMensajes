@@ -34,8 +34,8 @@ def create_schema():
     CREATE TABLE IF NOT EXISTS notes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         content TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT,
+        updated_at TEXT
     );
     """)
 
@@ -54,11 +54,11 @@ def create_schema():
         column_id INTEGER NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        started_at TIMESTAMP,
-        finished_at TIMESTAMP,
+        created_at TEXT,
+        started_at TEXT,
+        finished_at TEXT,
         assignee TEXT,
-        due_date TIMESTAMP,
+        due_date TEXT,
         FOREIGN KEY (column_id) REFERENCES kanban_columns (id)
     );
     """)
@@ -69,7 +69,7 @@ def create_schema():
     if 'assignee' not in columns:
         cursor.execute("ALTER TABLE kanban_cards ADD COLUMN assignee TEXT;")
     if 'due_date' not in columns:
-        cursor.execute("ALTER TABLE kanban_cards ADD COLUMN due_date TIMESTAMP;")
+        cursor.execute("ALTER TABLE kanban_cards ADD COLUMN due_date TEXT;")
 
     # FTS5 virtual table for message indexing
     cursor.execute("""
@@ -128,8 +128,9 @@ def create_schema():
         checklist_id INTEGER NOT NULL,
         text TEXT NOT NULL,
         is_checked INTEGER NOT NULL DEFAULT 0,
-        due_at TIMESTAMP,
+        due_at TEXT,
         is_notified INTEGER NOT NULL DEFAULT 0,
+        pre_notified_at TEXT,
         FOREIGN KEY (checklist_id) REFERENCES checklists (id) ON DELETE CASCADE
     );
     """)
@@ -137,30 +138,26 @@ def create_schema():
     # Add due_at column to checklist_items if it doesn't exist
     cursor.execute("PRAGMA table_info(checklist_items);")
     columns = [col[1] for col in cursor.fetchall()]
-    if 'due_at' not in columns:
-        cursor.execute("ALTER TABLE checklist_items ADD COLUMN due_at TIMESTAMP;")
-    if 'is_notified' not in columns:
-        cursor.execute("ALTER TABLE checklist_items ADD COLUMN is_notified INTEGER NOT NULL DEFAULT 0;")
     if 'pre_notified_at' not in columns:
-        cursor.execute("ALTER TABLE checklist_items ADD COLUMN pre_notified_at TIMESTAMP;")
+        cursor.execute("ALTER TABLE checklist_items ADD COLUMN pre_notified_at TEXT;")
 
     # Table for reminders
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS reminders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         text TEXT NOT NULL,
-        due_at TIMESTAMP NOT NULL,
-        is_completed INTEGER NOT NULL DEFAULT 0
+        due_at TEXT NOT NULL,
+        is_completed INTEGER NOT NULL DEFAULT 0,
+        is_notified INTEGER NOT NULL DEFAULT 0,
+        pre_notified_at TEXT
     );
     """)
 
     # Add is_notified column to reminders if it doesn't exist
     cursor.execute("PRAGMA table_info(reminders);")
     columns = [col[1] for col in cursor.fetchall()]
-    if 'is_notified' not in columns:
-        cursor.execute("ALTER TABLE reminders ADD COLUMN is_notified INTEGER NOT NULL DEFAULT 0;")
     if 'pre_notified_at' not in columns:
-        cursor.execute("ALTER TABLE reminders ADD COLUMN pre_notified_at TIMESTAMP;")
+        cursor.execute("ALTER TABLE reminders ADD COLUMN pre_notified_at TEXT;")
 
     # Table for RSS feeds
     cursor.execute("""

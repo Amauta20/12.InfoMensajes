@@ -1,7 +1,8 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton, QListWidgetItem, QCheckBox
-from PyQt5.QtCore import Qt, pyqtSignal, QDateTime
-from app.db import reminders_manager
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton, QListWidgetItem, QCheckBox
+from PyQt6.QtCore import Qt, pyqtSignal, QDateTime
+from app.db import reminders_manager, settings_manager
 from app.ui.add_reminder_dialog import AddReminderDialog
+from app.utils import time_utils
 
 class RemindersWidget(QWidget):
     reminders_updated = pyqtSignal()
@@ -40,9 +41,9 @@ class RemindersWidget(QWidget):
 
         due_at_str = reminder['due_at']
         if due_at_str:
-            utc_dt = QDateTime.fromString(due_at_str, Qt.ISODate)
+            utc_dt = QDateTime.fromString(due_at_str, Qt.DateFormat.ISODate)
             local_dt = utc_dt.toLocalTime()
-            formatted_due_at = local_dt.toString("dd/MM/yyyy HH:mm")
+            formatted_due_at = local_dt.toString(time_utils.convert_strftime_to_qt_format(settings_manager.get_datetime_format()))
         else:
             formatted_due_at = ""
 
@@ -63,7 +64,7 @@ class RemindersWidget(QWidget):
         if dialog.exec():
             text, qdt = dialog.get_data()
             if text:
-                utc_dt_str = qdt.toUTC().toString(Qt.ISODate)
+                utc_dt_str = qdt.toUTC().toString(Qt.DateFormat.ISODate)
                 reminders_manager.create_reminder(text, utc_dt_str)
                 self.load_reminders()
                 self.reminders_updated.emit()
@@ -74,6 +75,6 @@ class RemindersWidget(QWidget):
         self.reminders_updated.emit()
 
     def toggle_reminder_completed(self, reminder_id, state):
-        is_completed = 1 if state == Qt.Checked else 0
+        is_completed = 1 if state == Qt.CheckState.Checked.value else 0
         reminders_manager.update_reminder(reminder_id, is_completed=is_completed)
         self.reminders_updated.emit()

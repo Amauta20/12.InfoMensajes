@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton, QLabel, QListWidgetItem
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton, QLabel, QListWidgetItem
+from PyQt6.QtCore import Qt, pyqtSignal
 from app.services import service_manager
 
 class SelectServiceDialog(QDialog):
@@ -50,7 +50,7 @@ class SelectServiceDialog(QDialog):
         catalog = service_manager.load_catalog()
         for service in catalog:
             item = QListWidgetItem(service['name'])
-            item.setData(Qt.UserRole, service) # Store full service dict
+            item.setData(Qt.ItemDataRole.UserRole, service) # Store full service dict
             self.catalog_list.addItem(item)
 
     def _on_catalog_item_double_clicked(self, item):
@@ -59,7 +59,7 @@ class SelectServiceDialog(QDialog):
     def _on_select_button_clicked(self):
         selected_item = self.catalog_list.currentItem()
         if selected_item:
-            service_data = selected_item.data(Qt.UserRole)
+            service_data = selected_item.data(Qt.ItemDataRole.UserRole)
             self.catalog_service_selected.emit(service_data['name'], service_data['url'], service_data['icon'])
             self.accept()
         else:

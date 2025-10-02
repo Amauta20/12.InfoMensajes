@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QListWidget, QLabel, QListWidgetItem
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QListWidget, QLabel, QListWidgetItem
+from PyQt6.QtCore import Qt, pyqtSignal
 import re
 
 class SearchResultsWidget(QWidget):
@@ -52,7 +52,7 @@ class SearchResultsWidget(QWidget):
             for result in items:
                 item = QListWidgetItem()
                 self.results_list.addItem(item)
-                item.setData(Qt.UserRole, dict(result))
+                item.setData(Qt.ItemDataRole.UserRole, dict(result))
 
                 label = QLabel()
                 label.setWordWrap(True)
@@ -88,6 +88,6 @@ class SearchResultsWidget(QWidget):
         return highlighted_text
 
     def on_result_clicked(self, item):
-        result_data = item.data(Qt.UserRole)
+        result_data = item.data(Qt.ItemDataRole.UserRole)
         if result_data:
             self.result_clicked.emit(result_data)

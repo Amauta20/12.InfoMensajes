@@ -5,3 +5,4 @@ PyInstaller
 ruff
 black
 mypy
+openpyxl

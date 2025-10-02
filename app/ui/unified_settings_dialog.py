@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QDialogButtonBox, QColorDialog
-from PyQt5.QtGui import QColor
-from PyQt5.QtCore import Qt
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QDialogButtonBox, QColorDialog
+from PyQt6.QtGui import QColor
+from PyQt6.QtCore import Qt
 from app.db import settings_manager
 from zoneinfo import available_timezones
 
@@ -77,7 +77,7 @@ class UnifiedSettingsDialog(QDialog):
 
         self.layout.addLayout(self.form_layout)
 
-        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.buttons.accepted.connect(self.save_settings)
         self.buttons.rejected.connect(self.reject)
         self.layout.addWidget(self.buttons)

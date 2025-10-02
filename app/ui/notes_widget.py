@@ -1,6 +1,8 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QListWidget, QListWidgetItem, QLineEdit, QDialog, QMenu, QGroupBox, QPushButton
-from PyQt5.QtCore import Qt, QDateTime, pyqtSignal as Signal
-from PyQt5.QtWidgets import QAction
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QListWidget, QListWidgetItem, QLineEdit, QDialog, QMenu, QGroupBox, QPushButton
+from PyQt6.QtCore import Qt, QDateTime, pyqtSignal as Signal
+from PyQt6.QtGui import QAction
+from app.utils import time_utils
+from app.db import settings_manager
 
 from app.db import notes_manager
 from app.ui.edit_note_dialog import EditNoteDialog
@@ -13,7 +15,7 @@ class NoteInput(QTextEdit):
         self.setFixedHeight(60)
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Return and event.modifiers() == Qt.ControlModifier:
+        if event.key() == Qt.Key.Key_Return and event.modifiers() == Qt.ControlModifier:
             self.parent_widget.add_note_from_input()
             return
         super().keyPressEvent(event)
@@ -44,7 +46,7 @@ class NotesWidget(QWidget):
 
         self.notes_list = QListWidget()
         self.notes_list.setFixedHeight(200)
-        self.notes_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.notes_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.notes_list.customContextMenuRequested.connect(self.show_note_context_menu)
         self.notes_list.itemDoubleClicked.connect(self.edit_note)
 
@@ -64,11 +66,11 @@ class NotesWidget(QWidget):
 
     # --- Note Management Methods ---
     def edit_note(self, item):
-        note_id = item.data(Qt.UserRole)
-        original_content = item.data(Qt.UserRole + 1)
+        note_id = item.data(Qt.ItemDataRole.UserRole)
+        original_content = item.data(Qt.ItemDataRole.UserRole + 1)
 
         dialog = EditNoteDialog(original_content, self)
-        if dialog.exec() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             new_content = dialog.get_new_content()
             if new_content and new_content != original_content:
                 notes_manager.update_note(note_id, new_content)
@@ -79,7 +81,7 @@ class NotesWidget(QWidget):
         item = list_widget.itemAt(pos)
 
         if item:
-            note_id = item.data(Qt.UserRole)
+            note_id = item.data(Qt.ItemDataRole.UserRole)
             if note_id is None: return
 
             menu = QMenu(self)
@@ -101,22 +103,22 @@ class NotesWidget(QWidget):
             
             timestamp = ""
             if note['updated_at']:
-                utc_dt = QDateTime.fromString(note['updated_at'], "yyyy-MM-dd HH:mm:ss")
-                utc_dt.setTimeSpec(Qt.UTC)
+                utc_dt = QDateTime.fromString(note['updated_at'], Qt.DateFormat.ISODate)
+                utc_dt.setTimeSpec(Qt.TimeSpec.UTC)
                 local_dt = utc_dt.toLocalTime()
-                timestamp = local_dt.toString("dd/MM/yyyy HH:mm")
+                timestamp = local_dt.toString(time_utils.convert_strftime_to_qt_format(settings_manager.get_datetime_format()))
 
             item_text = f"{snippet} ({timestamp})"
             item = QListWidgetItem(item_text)
-            item.setData(Qt.UserRole, note['id']) # Store note_id in item data
-            item.setData(Qt.UserRole + 1, note['content']) # Store full content for editing and filtering
+            item.setData(Qt.ItemDataRole.UserRole, note['id']) # Store note_id in item data
+            item.setData(Qt.ItemDataRole.UserRole + 1, note['content']) # Store full content for editing and filtering
             self.notes_list.addItem(item)
 
     def filter_notes(self, text):
         search_text = text.lower()
         for i in range(self.notes_list.count()):
             item = self.notes_list.item(i)
-            full_content = item.data(Qt.UserRole + 1).lower()
+            full_content = item.data(Qt.ItemDataRole.UserRole + 1).lower()
             if search_text in full_content:
                 item.setHidden(False)
             else:
@@ -125,6 +127,6 @@ class NotesWidget(QWidget):
     def find_and_select_note(self, note_id):
         for i in range(self.notes_list.count()):
             item = self.notes_list.item(i)
-            if item.data(Qt.UserRole) == note_id:
+            if item.data(Qt.ItemDataRole.UserRole) == note_id:
                 self.notes_list.setCurrentItem(item)
                 break

@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton, QInputDialog, QMessageBox, QListWidgetItem, QLabel, QSplitter
-from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtGui import QDesktopServices
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton, QInputDialog, QMessageBox, QListWidgetItem, QLabel, QSplitter
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QDesktopServices
 from app.db import rss_manager
 from app.ui.rss_article_item_widget import RssArticleItemWidget
 
@@ -10,7 +10,7 @@ class RssReaderWidget(QWidget):
         self.current_feed_url = None
 
         self.layout = QHBoxLayout(self)
-        self.splitter = QSplitter(Qt.Horizontal)
+        self.splitter = QSplitter(Qt.Orientation.Horizontal)
         self.layout.addWidget(self.splitter)
 
         # Left side: RSS feed list
@@ -48,12 +48,12 @@ class RssReaderWidget(QWidget):
         feeds = rss_manager.get_all_feeds()
         for feed in feeds:
             item = QListWidgetItem(feed['name'])
-            item.setData(Qt.UserRole, feed['id'])
-            item.setData(Qt.UserRole + 1, feed['url'])
+            item.setData(Qt.ItemDataRole.UserRole, feed['id'])
+            item.setData(Qt.ItemDataRole.UserRole + 1, feed['url'])
             self.feed_list.addItem(item)
 
     def on_feed_selected(self, item):
-        self.current_feed_url = item.data(Qt.UserRole + 1)
+        self.current_feed_url = item.data(Qt.ItemDataRole.UserRole + 1)
         self.article_list_label.setText(f"Artículos de: {item.text()}")
         self.load_articles()
 
@@ -71,7 +71,7 @@ class RssReaderWidget(QWidget):
                 list_item.setSizeHint(item_widget.sizeHint())
                 self.article_list.addItem(list_item)
                 self.article_list.setItemWidget(list_item, item_widget)
-                list_item.setData(Qt.UserRole, article['link'])
+                list_item.setData(Qt.ItemDataRole.UserRole, article['link'])
 
     def add_feed(self):
         name, ok = QInputDialog.getText(self, 'Añadir Feed RSS', 'Nombre del Feed:')
@@ -85,7 +85,7 @@ class RssReaderWidget(QWidget):
     def delete_feed(self):
         selected_item = self.feed_list.currentItem()
         if selected_item:
-            feed_id = selected_item.data(Qt.UserRole)
+            feed_id = selected_item.data(Qt.ItemDataRole.UserRole)
             reply = QMessageBox.question(self, 'Eliminar Feed', '¿Estás seguro de que quieres eliminar este feed?')
             if reply == QMessageBox.Yes:
                 rss_manager.delete_feed(feed_id)
@@ -93,6 +93,6 @@ class RssReaderWidget(QWidget):
                 self.article_list.clear()
 
     def open_article_link(self, item):
-        link = item.data(Qt.UserRole)
+        link = item.data(Qt.ItemDataRole.UserRole)
         if link:
             QDesktopServices.openUrl(QUrl(link))

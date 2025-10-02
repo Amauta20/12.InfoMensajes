@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
-from PyQt5.QtCore import QTimer, QTime, pyqtSignal as Signal
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+from PyQt6.QtCore import QTimer, QTime, pyqtSignal as Signal
 from app.db import settings_manager
 
 class PomodoroWidget(QWidget):

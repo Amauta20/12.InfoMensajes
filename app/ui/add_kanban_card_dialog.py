@@ -1,5 +1,7 @@
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QTextEdit, QPushButton, QLabel, QMessageBox, QDateTimeEdit
-from PyQt5.QtCore import Qt, QDateTime
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QTextEdit, QPushButton, QLabel, QMessageBox, QDateTimeEdit
+from PyQt6.QtCore import Qt, QDateTime
+from app.utils import time_utils
+from app.db import settings_manager
 
 class AddKanbanCardDialog(QDialog):
     def __init__(self, parent=None):
@@ -35,8 +37,8 @@ class AddKanbanCardDialog(QDialog):
         self.due_date_label = QLabel("Fecha de Entrega:")
         self.due_date_input = QDateTimeEdit()
         self.due_date_input.setCalendarPopup(True)
-        self.due_date_input.setDisplayFormat("dd/MM/yyyy HH:mm")
-        self.due_date_input.setDateTime(QDateTime.currentDateTime())
+        self.due_date_input.setDisplayFormat(time_utils.convert_strftime_to_qt_format(settings_manager.get_datetime_format()))
+        self.due_date_input.setDateTime(time_utils.get_current_qdatetime())
         self.layout.addWidget(self.due_date_label)
         self.layout.addWidget(self.due_date_input)
 

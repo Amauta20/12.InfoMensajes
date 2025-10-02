@@ -1,6 +1,7 @@
-from PyQt5.QtWidgets import QVBoxLayout, QPushButton, QWidget, QFileDialog, QLabel
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage # Explicitly import QWebEnginePage
-from PyQt5.QtCore import QUrl
+from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QWidget, QFileDialog, QLabel
+from PyQt6.QtWebEngineCore import QWebEnginePage
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtCore import QUrl
 import json
 import os
 from app.db import settings_manager
