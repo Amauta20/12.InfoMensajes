@@ -20,13 +20,18 @@ def get_all_columns():
     conn.close()
     return columns
 
-def create_card(column_id, title, description=None, assignee=None, due_date=None, created_at=None):
+def create_card(column_id, title, description=None, assignee=None, due_date=None, created_at=None, started_at=None, finished_at=None, start_date=None, end_date=None):
     """Adds a new card to a specified Kanban column."""
     conn = get_db_connection()
     cursor = conn.cursor()
     due_date_utc_str = time_utils.to_utc(due_date).isoformat() if isinstance(due_date, datetime.datetime) else due_date
-    created_at_utc_str = time_utils.to_utc(created_at).isoformat() if isinstance(created_at, datetime.datetime) else time_utils.to_utc(datetime.datetime.now()).isoformat()
-    cursor.execute("INSERT INTO kanban_cards (column_id, title, description, assignee, due_date, created_at) VALUES (?, ?, ?, ?, ?, ?)", (column_id, title, description, assignee, due_date_utc_str, created_at_utc_str))
+    created_at_utc_str = time_utils.to_utc(created_at).isoformat() if isinstance(created_at, datetime.datetime) else (created_at if created_at else time_utils.to_utc(datetime.datetime.now()).isoformat())
+    started_at_utc_str = time_utils.to_utc(started_at).isoformat() if isinstance(started_at, datetime.datetime) else started_at
+    finished_at_utc_str = time_utils.to_utc(finished_at).isoformat() if isinstance(finished_at, datetime.datetime) else finished_at
+    start_date_utc_str = time_utils.to_utc(start_date).isoformat() if isinstance(start_date, datetime.datetime) else start_date
+    end_date_utc_str = time_utils.to_utc(end_date).isoformat() if isinstance(end_date, datetime.datetime) else end_date
+    cursor.execute("INSERT INTO kanban_cards (column_id, title, description, assignee, due_date, created_at, started_at, finished_at, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+                   (column_id, title, description, assignee, due_date_utc_str, created_at_utc_str, started_at_utc_str, finished_at_utc_str, start_date_utc_str, end_date_utc_str))
     conn.commit()
     card_id = cursor.lastrowid
     conn.close()
@@ -35,7 +40,7 @@ def create_card(column_id, title, description=None, assignee=None, due_date=None
 def get_cards_by_column(column_id):
     """Retrieves all cards for a given Kanban column."""
     conn = get_db_connection()
-    cards = conn.execute("SELECT id, column_id, title, description, created_at, started_at, finished_at, assignee, due_date FROM kanban_cards WHERE column_id = ? ORDER BY created_at", (column_id,)).fetchall()
+    cards = conn.execute("SELECT id, column_id, title, description, created_at, started_at, finished_at, assignee, due_date, start_date, end_date FROM kanban_cards WHERE column_id = ? ORDER BY created_at", (column_id,)).fetchall()
     conn.close()
     return cards
 
@@ -50,13 +55,27 @@ def move_card(card_id, new_column_id):
 
     current_utc_time = time_utils.to_utc(datetime.datetime.now()).isoformat()
 
+    # Get current card details to preserve started_at if moving to 'Realizadas'
+    current_card = conn.execute("SELECT started_at, finished_at FROM kanban_cards WHERE id = ?", (card_id,)).fetchone()
+    current_started_at = current_card['started_at'] if current_card else None
+
     # Update timestamps based on the column name
-    if column_name == "En Progreso":
-        cursor.execute("UPDATE kanban_cards SET column_id = ?, started_at = ? WHERE id = ?", (new_column_id, current_utc_time, card_id))
+    started_at_val = current_started_at
+    finished_at_val = None
+
+    if column_name == "Por Hacer":
+        started_at_val = None
+        finished_at_val = None
+    elif column_name == "En Progreso":
+        if not current_started_at: # Only set started_at if it's not already set
+            started_at_val = current_utc_time
+        finished_at_val = None
     elif column_name == "Realizadas":
-        cursor.execute("UPDATE kanban_cards SET column_id = ?, finished_at = ? WHERE id = ?", (new_column_id, current_utc_time, card_id))
-    else:
-        cursor.execute("UPDATE kanban_cards SET column_id = ? WHERE id = ?", (new_column_id, card_id))
+        if not current_started_at: # If it somehow skipped 'En Progreso'
+            started_at_val = current_utc_time
+        finished_at_val = current_utc_time
+
+    cursor.execute("UPDATE kanban_cards SET column_id = ?, started_at = ?, finished_at = ? WHERE id = ?", (new_column_id, started_at_val, finished_at_val, card_id))
     
     conn.commit()
     conn.close()
@@ -68,13 +87,23 @@ def delete_card(card_id):
     conn.commit()
     conn.close()
 
-def update_card(card_id, new_title, new_description=None, new_assignee=None, new_due_date=None):
-    """Updates the title, description, assignee, and due date of an existing Kanban card."""
+def update_card(card_id, new_title, new_description=None, new_assignee=None, new_due_date=None, new_start_date=None, new_end_date=None):
+    """Updates the title, description, assignee, due date, start date, and end date of an existing Kanban card."""
     conn = get_db_connection()
     new_due_date_utc_str = time_utils.to_utc(new_due_date).isoformat() if isinstance(new_due_date, datetime.datetime) else new_due_date
-    conn.execute("UPDATE kanban_cards SET title = ?, description = ?, assignee = ?, due_date = ? WHERE id = ?", (new_title, new_description, new_assignee, new_due_date_utc_str, card_id))
+    new_start_date_utc_str = time_utils.to_utc(new_start_date).isoformat() if isinstance(new_start_date, datetime.datetime) else new_start_date
+    new_end_date_utc_str = time_utils.to_utc(new_end_date).isoformat() if isinstance(new_end_date, datetime.datetime) else new_end_date
+    conn.execute("UPDATE kanban_cards SET title = ?, description = ?, assignee = ?, due_date = ?, start_date = ?, end_date = ? WHERE id = ?", 
+                   (new_title, new_description, new_assignee, new_due_date_utc_str, new_start_date_utc_str, new_end_date_utc_str, card_id))
     conn.commit()
     conn.close()
+
+def get_card_details(card_id):
+    """Retrieves all details for a specific Kanban card."""
+    conn = get_db_connection()
+    card = conn.execute("SELECT id, column_id, title, description, created_at, started_at, finished_at, assignee, due_date, start_date, end_date FROM kanban_cards WHERE id = ?", (card_id,)).fetchone()
+    conn.close()
+    return card
 
 
 
@@ -103,7 +132,7 @@ def generate_kanban_report():
 def get_all_cards():
     """Retrieves all Kanban cards from the database."""
     conn = get_db_connection()
-    cards = conn.execute("SELECT id, column_id, title, description, created_at, started_at, finished_at, due_date FROM kanban_cards ORDER BY id DESC").fetchall()
+    cards = conn.execute("SELECT id, column_id, title, description, created_at, started_at, finished_at, due_date, start_date, end_date FROM kanban_cards ORDER BY id DESC").fetchall()
     conn.close()
     return cards
 
@@ -112,5 +141,11 @@ def get_cards_due_between(start_date, end_date):
     conn = get_db_connection()
     cards = conn.execute("SELECT title, due_date, assignee FROM kanban_cards WHERE due_date BETWEEN ? AND ?", (start_date, end_date)).fetchall()
     conn.close()
+    return cards
+
+def get_all_kanban_cards_for_gantt():
+    """Retrieves all Kanban cards for Gantt chart processing."""
+    conn = get_db_connection()
+    cards = conn.execute("SELECT id, column_id, title, description, created_at, started_at, finished_at, due_date FROM kanban_cards").fetchall()
     return cards
 

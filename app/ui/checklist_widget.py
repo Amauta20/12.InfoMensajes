@@ -182,8 +182,11 @@ class ChecklistWidget(QWidget):
             item.setData(Qt.ItemDataRole.UserRole, checklist['id'])
             self.independent_checklist_list.addItem(item)
 
-    def load_checklist_items(self, target_list_widget):
-        target_list_widget.clear()
+    def load_checklist_items(self):
+        current_list_widget = self._get_current_checklist_list_widget()
+        if not current_list_widget: return
+
+        current_list_widget.clear()
         if self.current_checklist_id:
             checklist = checklist_manager.get_checklist(self.current_checklist_id)
             if not checklist: return
@@ -191,26 +194,24 @@ class ChecklistWidget(QWidget):
                 item_widget = self.create_checklist_item_widget(item_data)
                 list_item = QListWidgetItem()
                 list_item.setSizeHint(item_widget.sizeHint())
-                target_list_widget.addItem(list_item)
-                target_list_widget.setItemWidget(list_item, item_widget)
+                current_list_widget.addItem(list_item)
+                current_list_widget.setItemWidget(list_item, item_widget)
 
     def on_kanban_card_selected(self, item):
         card_id = item.data(Qt.ItemDataRole.UserRole)
         checklists = checklist_manager.get_checklists_for_card(card_id)
         if checklists:
-            self.current_checklist_id = checklists[0]['id']
-            self.checklist_items_label.setText(f"Checklist para: {item.text()}")
-            self.load_checklist_items(self.checklist_items_list)
+            self.load_checklist_items()
         else:
             checklist_name = f"Checklist para {item.text()}"
             self.current_checklist_id = checklist_manager.create_checklist(checklist_name, card_id)
             self.checklist_items_label.setText(f"Checklist para: {item.text()}")
-            self.load_checklist_items(self.checklist_items_list)
+            self.load_checklist_items()
 
     def on_independent_checklist_selected(self, item):
         self.current_checklist_id = item.data(Qt.ItemDataRole.UserRole)
         self.checklist_items_label.setText(f"Checklist: {item.text()}")
-        self.load_checklist_items(self.independent_checklist_items_list)
+        self.load_checklist_items()
 
     def create_checklist_item_widget(self, item_data):
         widget = QWidget()
@@ -285,14 +286,14 @@ class ChecklistWidget(QWidget):
                     checklist_manager.add_item_to_checklist(self.current_checklist_id, text, due_at_str)
                     current_list_widget = self._get_current_checklist_list_widget()
                     if current_list_widget:
-                        self.load_checklist_items(current_list_widget)
+                        self.load_checklist_items()
                     self.checklist_updated.emit()
 
     def delete_item(self, item_id):
         checklist_manager.delete_checklist_item(item_id)
         current_list_widget = self._get_current_checklist_list_widget()
         if current_list_widget:
-            self.load_checklist_items(current_list_widget)
+            self.load_checklist_items()
         self.checklist_updated.emit()
 
     def toggle_item_checked(self, item_id, state, text_label):
@@ -312,12 +313,12 @@ class ChecklistWidget(QWidget):
                 checklist_manager.update_checklist_item(item_id, text=new_text, due_at=new_due_date_str)
                 current_list_widget = self._get_current_checklist_list_widget()
                 if current_list_widget:
-                    self.load_checklist_items(current_list_widget)
+                    self.load_checklist_items()
                 self.checklist_updated.emit()
 
     def update_item_due_date(self, item_id, datetime_qdt):
         # This method is no longer used as editing is handled by EditChecklistItemDialog
         pass
 
-    def refresh_kanban_cards():
+    def refresh_kanban_cards(self):
         self.load_kanban_cards()

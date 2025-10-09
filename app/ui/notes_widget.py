@@ -15,7 +15,7 @@ class NoteInput(QTextEdit):
         self.setFixedHeight(60)
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_Return and event.modifiers() == Qt.ControlModifier:
+        if event.key() == Qt.Key.Key_Return and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
             self.parent_widget.add_note_from_input()
             return
         super().keyPressEvent(event)
@@ -102,8 +102,8 @@ class NotesWidget(QWidget):
             snippet = note['content'].split('\n')[0] # First line as snippet
             
             timestamp = ""
-            if note['updated_at']:
-                utc_dt = QDateTime.fromString(note['updated_at'], Qt.DateFormat.ISODate)
+            if note['created_at']:
+                utc_dt = QDateTime.fromString(note['created_at'], Qt.DateFormat.ISODate)
                 utc_dt.setTimeSpec(Qt.TimeSpec.UTC)
                 local_dt = utc_dt.toLocalTime()
                 timestamp = local_dt.toString(time_utils.convert_strftime_to_qt_format(settings_manager.get_datetime_format()))

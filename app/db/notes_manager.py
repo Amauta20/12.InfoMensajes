@@ -1,13 +1,15 @@
+import datetime
 from app.db.database import get_db_connection
+from app.utils import time_utils
 
 def create_note(content):
     """Adds a new note to the database."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO notes (content) VALUES (?)", (content,))
+    current_utc_time = time_utils.to_utc(datetime.datetime.now()).isoformat()
+    cursor.execute("INSERT INTO notes (content, created_at) VALUES (?, ?)", (content, current_utc_time))
     conn.commit()
     note_id = cursor.lastrowid
-    conn.close()
     return note_id
 
 def get_all_notes():

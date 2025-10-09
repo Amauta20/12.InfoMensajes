@@ -1,5 +1,4 @@
-PyQt5
-PyQtWebEngine
+PySide6
 cryptography
 PyInstaller
 ruff

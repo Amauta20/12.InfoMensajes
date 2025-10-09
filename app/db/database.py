@@ -25,9 +25,16 @@ def create_schema():
         url TEXT NOT NULL,
         icon TEXT,
         profile_path TEXT NOT NULL UNIQUE,
-        is_active BOOLEAN DEFAULT 1
+        is_active BOOLEAN DEFAULT 1,
+        is_internal BOOLEAN DEFAULT 0
     );
     """)
+
+    # Add new columns to services if they don't exist
+    cursor.execute("PRAGMA table_info(services);")
+    columns = [col[1] for col in cursor.fetchall()]
+    if 'is_internal' not in columns:
+        cursor.execute("ALTER TABLE services ADD COLUMN is_internal BOOLEAN DEFAULT 0;")
 
     # Table for notes
     cursor.execute("""
@@ -59,9 +66,61 @@ def create_schema():
         finished_at TEXT,
         assignee TEXT,
         due_date TEXT,
+        start_date TEXT,
+        end_date TEXT,
         FOREIGN KEY (column_id) REFERENCES kanban_columns (id)
     );
     """)
+
+    # FTS table for notes
+    cursor.execute("CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(content, tokenize = 'porter unicode61');")
+
+    # Triggers to keep notes_fts synchronized
+    cursor.execute("""
+        CREATE TRIGGER IF NOT EXISTS notes_after_insert AFTER INSERT ON notes BEGIN
+            INSERT INTO notes_fts(rowid, content) VALUES (new.id, COALESCE(new.content, ''));
+        END;
+    """)
+
+    cursor.execute("""
+        CREATE TRIGGER IF NOT EXISTS notes_after_delete AFTER DELETE ON notes BEGIN
+            DELETE FROM notes_fts WHERE rowid = old.id;
+        END;
+    """)
+
+    cursor.execute("""
+        CREATE TRIGGER IF NOT EXISTS notes_after_delete AFTER DELETE ON notes BEGIN
+            DELETE FROM notes_fts WHERE rowid = old.id;
+        END;
+    """)
+
+    cursor.execute("""
+        CREATE TRIGGER IF NOT EXISTS notes_after_delete AFTER DELETE ON notes BEGIN
+            DELETE FROM notes_fts WHERE rowid = old.id;
+        END;
+    """)
+
+    cursor.execute("""
+        CREATE TRIGGER IF NOT EXISTS notes_after_update AFTER UPDATE ON notes BEGIN
+            DELETE FROM notes_fts WHERE rowid = old.id;
+            INSERT INTO notes_fts(rowid, content) VALUES(new.id, COALESCE(new.content, ''));
+        END;
+    """)
+
+
+
+    # FTS table for kanban cards
+    cursor.execute("CREATE VIRTUAL TABLE IF NOT EXISTS kanban_cards_fts USING fts5(title, description, tokenize = 'porter unicode61');")
+
+    # Triggers to keep kanban_cards_fts synchronized
+    cursor.execute("""
+        CREATE TRIGGER IF NOT EXISTS kanban_cards_after_insert AFTER INSERT ON kanban_cards BEGIN
+            INSERT INTO kanban_cards_fts(rowid, title, description) VALUES (new.id, COALESCE(new.title, ''), COALESCE(new.description, ''));
+        END;
+    """)
+
+
+
 
     # Add new columns to kanban_cards if they don't exist
     cursor.execute("PRAGMA table_info(kanban_cards);")
@@ -70,6 +129,10 @@ def create_schema():
         cursor.execute("ALTER TABLE kanban_cards ADD COLUMN assignee TEXT;")
     if 'due_date' not in columns:
         cursor.execute("ALTER TABLE kanban_cards ADD COLUMN due_date TEXT;")
+    if 'start_date' not in columns:
+        cursor.execute("ALTER TABLE kanban_cards ADD COLUMN start_date TEXT;")
+    if 'end_date' not in columns:
+        cursor.execute("ALTER TABLE kanban_cards ADD COLUMN end_date TEXT;")
 
     # FTS5 virtual table for message indexing
     cursor.execute("""

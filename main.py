@@ -5,6 +5,10 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from PyQt6.QtWidgets import QApplication
 from app.ui.main_window import MainWindow
 from app.db.database import create_schema
+from app.search.search_manager import rebuild_fts_indexes
+from app.metrics.metrics_manager import MetricsManager
+from app.db import notes_manager, kanban_manager
+import datetime
 from app.security.vault import Vault
 from app.ui.styles import dark_theme_stylesheet
 
@@ -17,6 +21,10 @@ os.environ["QT_OPENGL"] = "software"
 def main():
     # Ensure the database schema is created on startup
     create_schema()
+    rebuild_fts_indexes()
+
+    # Initialize metrics manager after schema is created
+    global_metrics_manager = MetricsManager.get_instance()
 
     db_path = os.path.join(os.getcwd(), "infomensajero.db")
     print(f"Checking for database at: {db_path}")
@@ -26,10 +34,9 @@ def main():
         print("Database file NOT found.")
     
 
-
     app = QApplication(sys.argv)
     app.setStyleSheet(dark_theme_stylesheet)
-    window = MainWindow()
+    window = MainWindow(global_metrics_manager)
     window.show()
     sys.exit(app.exec())
 

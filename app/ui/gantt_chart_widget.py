@@ -1,176 +1,315 @@
-from PyQt6.QtWidgets import QVBoxLayout, QPushButton, QWidget, QFileDialog, QLabel
+import json
+import datetime
+from PyQt6.QtWidgets import QVBoxLayout, QWidget, QPushButton, QFileDialog
 from PyQt6.QtWebEngineCore import QWebEnginePage
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtCore import QUrl
-import json
-import os
+from PyQt6.QtCore import QObject, pyqtSlot
+from PyQt6.QtWebChannel import QWebChannel
+
+from app.db import kanban_manager
 from app.db import settings_manager
+
+class GanttBridge(QObject):
+    """
+    Bridge object to allow communication from JavaScript (in QWebEngineView)
+    to Python.
+    """
+    @pyqtSlot(int, str, str)
+    def update_task_dates(self, task_id, start_date, end_date):
+        """
+        Slot that receives updated task data from the Gantt chart JS.
+        """
+        print(f"Received update from JS: ID={task_id}, Start={start_date}, End={end_date}")
+        
+        # The dates from dhtmlxGantt are in "YYYY-MM-DD HH:MM" format.
+        # We need to parse them into datetime objects.
+        try:
+            start_date_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d %H:%M")
+            end_date_obj = datetime.datetime.strptime(end_date, "%Y-%m-%d %H:%M")
+
+            # Fetch existing card details to preserve other fields
+            card = kanban_manager.get_card_details(task_id)
+            if card:
+                kanban_manager.update_card(
+                    card_id=task_id,
+                    new_title=card['title'],
+                    new_description=card['description'],
+                    new_assignee=card['assignee'],
+                    new_due_date=card['due_date'],
+                    new_start_date=start_date_obj,
+                    new_end_date=end_date_obj
+                )
+                print(f"Successfully updated card {task_id} in the database.")
+            else:
+                print(f"Error: Card with ID {task_id} not found.")
+
+        except Exception as e:
+            print(f"Error updating card from Gantt: {e}")
+
 
 class GanttChartWidget(QWidget):
     def __init__(self):
         super().__init__()
         self.tasks = []
-        self.dependencies = []
         self.init_ui()
+        self.refresh_gantt()
 
     def init_ui(self):
-        self.layout = QVBoxLayout()
+        self.layout = QVBoxLayout(self)
 
+        # --- Web View for Gantt ---
         self.web_view = QWebEngineView()
+        self.page = QWebEnginePage(self)
+        self.web_view.setPage(self.page)
+        
+        # --- Setup Bridge for JS -> Python communication ---
+        self.bridge = GanttBridge()
+        self.channel = QWebChannel()
+        self.channel.registerObject("ganttBridge", self.bridge)
+        self.page.setWebChannel(self.channel)
+
         self.layout.addWidget(self.web_view)
 
-        self.export_button = QPushButton("Export to HTML")
-        self.export_button.clicked.connect(self.export_to_html)
-        self.layout.addWidget(self.export_button)
+        # --- Buttons ---
+        self.export_html_button = QPushButton("Export to HTML")
+        self.export_html_button.clicked.connect(self.export_to_html)
+        self.layout.addWidget(self.export_html_button)
+
+        self.export_png_button = QPushButton("Export to PNG")
+        self.export_png_button.clicked.connect(self.export_to_png)
+        self.layout.addWidget(self.export_png_button)
 
         self.setLayout(self.layout)
 
-
-
-    def load_gantt_chart(self, tasks, dependencies):
-        print("--- Entering load_gantt_chart ---")
+    def refresh_gantt(self):
+        """
+        Fetches all cards from the database and reloads the Gantt chart.
+        """
+        print("--- Refreshing Gantt Chart ---")
         try:
-            self.tasks = tasks
-            self.dependencies = dependencies
-            print("Generating Gantt HTML...")
+            all_cards = kanban_manager.get_all_cards()
+            self.tasks = self._transform_cards_to_gantt_tasks(all_cards)
             html_content = self._generate_gantt_html()
-            print("Setting HTML content...")
             self.web_view.setHtml(html_content)
-            print("HTML content set.")
+            print("Gantt chart reloaded successfully.")
         except Exception as e:
-            print(f"--- ERROR in load_gantt_chart: {e} ---")
-        print("--- Exiting load_gantt_chart ---")
+            print(f"--- ERROR in refresh_gantt: {e} ---")
+
+    def _transform_cards_to_gantt_tasks(self, cards):
+        gantt_tasks = []
+        
+        columns = kanban_manager.get_all_columns()
+        column_map = {col['id']: col['name'] for col in columns}
+        today = datetime.datetime.now()
+
+        for card in cards:
+            status = "not_started"
+            column_name = column_map.get(card['column_id'])
+            if column_name == "En Progreso":
+                status = "in_progress"
+            elif column_name == "Realizadas":
+                status = "completed"
+
+            task_details = {
+                "id": card['id'],
+                "name": card['title'],
+                "status": status,
+                "due_date": card['due_date'] if 'due_date' in card else None
+            }
+
+            # A task is a milestone if it is not started AND has no start date.
+            is_milestone = (
+                status == 'not_started' and
+                ('start_date' not in card or not card['start_date']) and
+                'due_date' in card and card['due_date']
+            )
+
+            if is_milestone:
+                due_date = datetime.datetime.fromisoformat(card['due_date'])
+                task_details["start"] = due_date.isoformat()
+                task_details["type"] = "milestone"
+            else:
+                # All other tasks are bars, including those with a future start date.
+                if 'start_date' in card and card['start_date'] and 'end_date' in card and card['end_date']:
+                    start = datetime.datetime.fromisoformat(card['start_date'])
+                    end = datetime.datetime.fromisoformat(card['end_date'])
+                else:
+                    # Fallback for tasks without start/end dates (e.g., legacy tasks)
+                    start = datetime.datetime.fromisoformat(card['created_at'])
+                    end = start + datetime.timedelta(days=1)
+                
+                task_details["start"] = start.isoformat()
+                task_details["end"] = end.isoformat()
+
+                if status == 'completed':
+                    task_details["progress"] = 1.0
+                elif status == 'in_progress' and 'due_date' in card and card['due_date'] and 'start_date' in card and card['start_date']:
+                    start_date = datetime.datetime.fromisoformat(card['start_date'])
+                    due_date = datetime.datetime.fromisoformat(card['due_date'])
+                    
+                    total_duration = (due_date - start_date).total_seconds()
+                    elapsed_duration = (today - start_date).total_seconds()
+
+                    if total_duration > 0:
+                        progress = max(0, min(1, elapsed_duration / total_duration))
+                        task_details["progress"] = round(progress, 2)
+                    else:
+                        task_details["progress"] = 0
+                else:
+                    task_details["progress"] = 0
+
+            gantt_tasks.append(task_details)
+        return gantt_tasks
+        return gantt_tasks
+
+    def _get_dhtmlx_color(self, status):
+        if status == "not_started":
+            return settings_manager.get_todo_color()
+        elif status == "in_progress":
+            return settings_manager.get_inprogress_color()
+        elif status == "completed":
+            return settings_manager.get_done_color()
+        return "#808080" # Default grey
 
     def _generate_gantt_html(self):
-        print("--- Entering _generate_gantt_html ---")
-        try:
-            tasks_json = json.dumps(self.tasks)
-            dependencies_json = json.dumps(self.dependencies)
+        print("--- Generating Gantt HTML ---")
+        
+        dhtmlx_tasks = []
+        for task in self.tasks:
+            start_date_str = datetime.datetime.fromisoformat(task['start']).strftime("%Y-%m-%d")
+            # For milestones, end_date might not be needed in the same way, but we ensure it exists
+            end_date_str = datetime.datetime.fromisoformat(task.get('end', task['start'])).strftime("%Y-%m-%d")
 
-            # Get colors from settings
-            todo_color = settings_manager.get_todo_color()
-            inprogress_color = settings_manager.get_inprogress_color()
-            done_color = settings_manager.get_done_color()
+            task_data = {
+                'id': task['id'],
+                'text': task['name'],
+                'start_date': start_date_str,
+                'color': self._get_dhtmlx_color(task['status'])
+            }
 
-            html_template = '''
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Gantt Chart</title>
-                <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-                <script type="text/javascript">
-                    google.charts.load('current', {{'packages':['gantt']}});
-                    google.charts.setOnLoadCallback(drawChart);
+            if task.get('type') == 'milestone':
+                task_data['type'] = 'milestone'
+                # Milestones in dhtmlxGantt are often represented by their start date.
+                # Duration can be 0.
+                task_data['duration'] = 0
+            else:
+                task_data['end_date'] = end_date_str
+                task_data['progress'] = task.get('progress', 0)
 
-                    function drawChart() {{
-                        try {{
-                            const data = new google.visualization.DataTable();
-                            data.addColumn('string', 'Task ID');
-                            data.addColumn('string', 'Task Name');
-                            data.addColumn('string', 'Resource');
-                            data.addColumn('date', 'Start Date');
-                            data.addColumn('date', 'End Date');
-                            data.addColumn('number', 'Duration');
-                            data.addColumn('number', 'Percent Complete');
-                            data.addColumn('string', 'Dependencies');
+            if task.get('due_date'):
+                task_data['due_date_marker'] = datetime.datetime.fromisoformat(task['due_date']).strftime("%Y-%m-%d")
+            
+            dhtmlx_tasks.append(task_data)
 
-                            const tasks = {tasks_json};
-                            const dependencies = {dependencies_json};
+        tasks_json = json.dumps(dhtmlx_tasks)
 
-                            const colorMap = {{
-                                "not_started": "{todo_color}",
-                                "in_progress": "{inprogress_color}",
-                                "completed": "{done_color}"
-                            }};
+        # HTML template with DHTMLX Gantt configuration
+        html_template = '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Gantt Chart</title>
+            <script src="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.js"></script>
+            <link href="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.css" rel="stylesheet">
+            <!-- Include the QWebChannel script -->
+            <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+            <style>
+                html, body {
+                    height: 100%;
+                    padding: 0;
+                    margin: 0;
+                    overflow: hidden;
+                }
+                /* Make text inside tasks visible */
+                .gantt_task_text { color: #222; }
 
-                            tasks.forEach((task, index) => {{
-                                const startDate = new Date(task.start);
-                                const endDate = new Date(task.end);
-                                let duration = endDate.getTime() - startDate.getTime();
+                /* Style for the progress bar text */
+                .gantt_task_progress_text {
+                    text-align: center;
+                    font-weight: bold;
+                    color: white;
+                    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+                }
 
-                                if (duration === 0 && task.status === "not_started") {{
-                                    duration = 24 * 60 * 60 * 1000;
-                                }} else if (duration === 0) {{
-                                    duration = 24 * 60 * 60 * 1000;
-                                }}
+                /* Custom style for milestone tasks */
+                .gantt_milestone {
+                    background-color: transparent; /* Hide the default bar */
+                    border: none;
+                }
+                .gantt_milestone .gantt_task_content {
+                    /* Hide the default content box for milestones */
+                    display: none;
+                }
 
-                                data.addRow([
-                                    'Task' + index,
-                                    task.name,
-                                    task.status,
-                                    startDate,
-                                    endDate,
-                                    duration,
-                                    100,
-                                    null
-                                ]);
-                            }});
+            </style>
+        </head>
+        <body>
+            <div id="gantt_here" style='width:100%; height:100%;'></div>
+            <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    // --- Initialize Web Channel ---
+                    new QWebChannel(qt.webChannelTransport, function (channel) {
+                        window.ganttBridge = channel.objects.ganttBridge;
+                    });
 
-                            const options = {{
-                                gantt: {{
-                                    trackHeight: 30,
-                                    dayOfWeekEnabled: false,
-                                    labelStyle: {{
-                                        fontName: 'Arial',
-                                        fontSize: 10
-                                    }},
-                                    criticalPathEnabled: false,
-                                    arrow: {{
-                                        angle: 100,
-                                        width: 5,
-                                        color: '#555',
-                                        radius: 0
-                                    }},
-                                    palette: [
-                                        {{
-                                            "color": colorMap["not_started"],
-                                            "dark": colorMap["not_started"],
-                                            "light": colorMap["not_started"]
-                                        }},
-                                        {{
-                                            "color": colorMap["in_progress"],
-                                            "dark": colorMap["in_progress"],
-                                            "light": colorMap["in_progress"]
-                                        }},
-                                        {{
-                                            "color": colorMap["completed"],
-                                            "dark": colorMap["completed"],
-                                            "light": colorMap["completed"]
-                                        }}
-                                    ]
-                                }}
-                            }};
+                    // --- Gantt Configuration ---
+                    gantt.config.date_format = "%Y-%m-%d";
+                    gantt.config.readonly = false; // Make it interactive
+                    gantt.config.show_errors = true;
+                    gantt.config.drag_move = true;
+                    gantt.config.drag_resize = true;
+                    gantt.config.types.milestone = "milestone"; // Ensure milestone type is recognized
+                    gantt.config.sort = true;
 
-                            const chart = new google.visualization.Gantt(document.getElementById('chart_div'));
-                            chart.draw(data, options);
-                        }} catch (e) {{
-                            console.error("Error drawing Gantt chart:", e);
-                        }}
-                    }}
-                </script>
-                <style>
-                    body {{ font-family: Arial, sans-serif; margin: 0; padding: 0; overflow: hidden; }}
-                    #chart_div {{ width: 100%; height: 100vh; }}
-                </style>
-            </head>
-            <body>
-                <div id="chart_div"></div>
-            </body>
-            </html>
-            '''
+                    // --- Template for progress text ---
+                    gantt.templates.progress_text = function(start, end, task){
+                        if (task.progress) {
+                            return Math.round(task.progress * 100) + "%";
+                        }
+                        return "";
+                    };
 
-            html_content = html_template.format(
-                tasks_json=tasks_json,
-                dependencies_json=dependencies_json,
-                todo_color=todo_color,
-                inprogress_color=inprogress_color,
-                done_color=done_color
-            )
-            print("--- Exiting _generate_gantt_html ---")
-            return html_content
-        except Exception as e:
-            print(f"--- ERROR in _generate_gantt_html: {e} ---")
-            return ""
+                    // --- Template for task text ---
+                    gantt.templates.task_text = function(start, end, task){
+                        if (task.type == 'milestone') {
+                            return "<b>" + task.text + "</b>"; // Just show name for milestones
+                        }
+                        return "<b>" + task.text + "</b>";
+                    };
+
+                    // --- Template for task CSS class ---
+                    gantt.templates.task_class = function(start, end, task){
+                        var css = [];
+                        if(task.type == 'milestone'){
+                            css.push("gantt_milestone");
+                        }
+                        if(task.progress == 1){
+                            css.push("task-completed"); // Example class
+                        }
+                        return css.join(" ");
+                    };
+                    
+                    // --- Event Handlers ---
+                    gantt.attachEvent("onAfterTaskDrag", function(id, mode, task, original){
+                        if (window.ganttBridge) {
+                            var start_str = gantt.templates.format_date(task.start_date, "yyyy-MM-dd HH:mm");
+                            var end_str = gantt.templates.format_date(task.end_date, "yyyy-MM-dd HH:mm");
+                            window.ganttBridge.update_task_dates(id, start_str, end_str);
+                        }
+                    });
+
+                    // --- Initialization ---
+                    gantt.init("gantt_here");
+                    gantt.parse({
+                        data: __TASKS_JSON__
+                    });
+                });
+            </script>
+        </body>
+        </html>
+        '''
+        
+        return html_template.replace('__TASKS_JSON__', tasks_json)
 
     def export_to_html(self):
         file_path, _ = QFileDialog.getSaveFileName(self, "Export Gantt Chart to HTML", "", "HTML Files (*.html);;All Files (*)")
@@ -184,3 +323,10 @@ class GanttChartWidget(QWidget):
             print(f"Gantt chart exported to {file_path}")
         except Exception as e:
             print(f"Error exporting Gantt chart: {e}")
+
+    def export_to_png(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, "Export Gantt Chart to PNG", "", "PNG Files (*.png);;All Files (*)")
+        if file_path:
+            pixmap = self.web_view.grab()
+            pixmap.save(file_path, 'png')
+            print(f"Gantt chart exported to {file_path}")

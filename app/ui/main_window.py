@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QSplitter, QStackedWidget, QToolBar, QLineEdit, QDialog, QSystemTrayIcon, QPushButton
 from PyQt6.QtCore import Qt, QUrl, QTimer, QDateTime
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtGui import QKeySequence, QShortcut, QIcon
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
 import os
@@ -21,13 +21,16 @@ from app.ui.checklist_widget import ChecklistWidget
 from app.ui.reminders_widget import RemindersWidget
 from app.ui.pomodoro_widget import PomodoroWidget
 from app.ui.rss_reader_widget import RssReaderWidget
+from app.ui.vault_widget import VaultWidget
+from app.metrics.metrics_manager import MetricsManager
 
 from app.ui.select_service_dialog import SelectServiceDialog
 from app.ui.unified_settings_dialog import UnifiedSettingsDialog
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, metrics_manager_instance):
         super().__init__()
+        self.metrics_manager = metrics_manager_instance
         self.setWindowTitle("InfoMensajero")
         self.setGeometry(100, 100, 1280, 720)
 
@@ -95,6 +98,10 @@ class MainWindow(QMainWindow):
         self.rss_reader_widget = RssReaderWidget()
         self.web_view_stack.addWidget(self.rss_reader_widget)
 
+        # Vault Widget
+        self.vault_widget = VaultWidget()
+        self.web_view_stack.addWidget(self.vault_widget)
+
         # Sidebar
         self.sidebar = Sidebar()
         self.sidebar.setFixedWidth(240)
@@ -117,6 +124,7 @@ class MainWindow(QMainWindow):
         self.sidebar.show_checklist_requested.connect(self.show_checklist_tools)
         self.sidebar.show_reminders_requested.connect(self.show_reminders_tools)
         self.sidebar.show_rss_reader_requested.connect(self.show_rss_reader_tools)
+        self.sidebar.show_vault_requested.connect(self.show_vault_tools)
 
         # Welcome widget signals
         self.welcome_widget.show_kanban_requested.connect(self.show_kanban_tools)
@@ -129,13 +137,14 @@ class MainWindow(QMainWindow):
         self.reminders_widget.reminders_updated.connect(self.welcome_widget.refresh)
 
         self.kanban_widget.kanban_updated.connect(self.checklist_widget.refresh_kanban_cards)
+        self.kanban_widget.kanban_updated.connect(self.gantt_chart_widget.refresh_gantt) # Sync Kanban -> Gantt
 
         self.search_results_widget.result_clicked.connect(self.on_search_result_clicked)
 
-        self.pomodoro_widget.pomodoro_finished.connect(self.show_pomodoro_notification)
-
         # Notification system
         self.tray_icon = QSystemTrayIcon(self)
+        icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'icon.png'))
+        self.tray_icon.setIcon(QIcon(icon_path))
         self.tray_icon.show()
 
         self.notification_timer = QTimer(self)
@@ -144,6 +153,13 @@ class MainWindow(QMainWindow):
 
         # Load initial service or a default page
         self.load_initial_page()
+
+        # Start tracking initial page
+        self.metrics_manager.start_tracking("Bienvenida") # Start tracking Welcome widget
+
+    def closeEvent(self, event):
+        self.metrics_manager.stop_tracking_current()
+        super().closeEvent(event)
 
     def show_notification(self, title, message):
         self.tray_icon.showMessage(title, message, QSystemTrayIcon.MessageIcon.Information, 5000)
@@ -198,81 +214,60 @@ class MainWindow(QMainWindow):
 
     def show_notes_tools(self):
         self.web_view_stack.setCurrentWidget(self.notes_widget)
+        self.track_current_widget_usage()
 
     def show_kanban_tools(self):
         self.web_view_stack.setCurrentWidget(self.kanban_widget)
+        self.track_current_widget_usage()
 
     def show_gantt_chart_tools(self):
-        print("--- Entering show_gantt_chart_tools ---")
-        try:
-            print("Getting all Kanban cards...")
-            kanban_cards = kanban_manager.get_all_cards()
-            print(f"Found {len(kanban_cards)} Kanban cards.")
-
-            gantt_tasks = []
-            for card in kanban_cards:
-                card_start_date = card['started_at']
-                card_created_at = card['created_at']
-                card_finished_at = card['finished_at']
-                card_due_date = card['due_date']
-
-                status = "not_started"
-                if card_finished_at:
-                    status = "completed"
-                elif card_start_date:
-                    status = "in_progress"
-
-                effective_start_date = None
-                effective_end_date = None
-
-                if status == "not_started":
-                    if card_due_date:
-                        effective_start_date = card_due_date
-                        effective_end_date = card_due_date
-                elif status == "in_progress":
-                    if card_start_date and card_due_date:
-                        effective_start_date = card_start_date
-                        effective_end_date = card_due_date
-                    elif card_start_date:
-                        effective_start_date = card_start_date
-                        effective_end_date = QDateTime.currentDateTime().toUTC().toString(Qt.DateFormat.ISODate)
-                elif status == "completed":
-                    if card_start_date and card_finished_at:
-                        effective_start_date = card_start_date
-                        effective_end_date = card_finished_at
-                    elif card_finished_at:
-                        effective_start_date = card_finished_at
-                        effective_end_date = card_finished_at
-
-                if effective_start_date and effective_end_date:
-                    gantt_tasks.append({
-                        'name': card['title'],
-                        'start': effective_start_date,
-                        'end': effective_end_date,
-                        'status': status
-                    })
-            
-            print(f"Formatted Gantt Tasks: {gantt_tasks}")
-
-            gantt_dependencies = []
-
-            print("Loading Gantt chart...")
-            self.gantt_chart_widget.load_gantt_chart(gantt_tasks, gantt_dependencies)
-            print("Setting current widget to Gantt chart...")
-            self.web_view_stack.setCurrentWidget(self.gantt_chart_widget)
-            print(f"Current widget in stack: {self.web_view_stack.currentWidget()}")
-        except Exception as e:
-            print(f"--- ERROR in show_gantt_chart_tools: {e} ---")
-        print("--- Exiting show_gantt_chart_tools ---")
+        self.web_view_stack.setCurrentWidget(self.gantt_chart_widget)
+        self.gantt_chart_widget.refresh_gantt() # Trigger initial load
+        self.track_current_widget_usage()
 
     def show_checklist_tools(self):
         self.web_view_stack.setCurrentWidget(self.checklist_widget)
+        self.track_current_widget_usage()
 
     def show_reminders_tools(self):
         self.web_view_stack.setCurrentWidget(self.reminders_widget)
+        self.track_current_widget_usage()
 
     def show_rss_reader_tools(self):
         self.web_view_stack.setCurrentWidget(self.rss_reader_widget)
+        self.track_current_widget_usage()
+        self.track_current_widget_usage()
+
+    def show_vault_tools(self):
+        self.web_view_stack.setCurrentWidget(self.vault_widget)
+        self.track_current_widget_usage()
+
+    def track_current_widget_usage(self):
+        current_widget = self.web_view_stack.currentWidget()
+        service_name = "Desconocido"
+
+        if isinstance(current_widget, QWebEngineView):
+            # For web views, try to get the service name from the URL or profile
+            # This is a simplified approach; a more robust one would map profile_path back to service name
+            for profile_path, view in self.web_views.items():
+                if view == current_widget:
+                    service_details = service_manager.get_service_by_profile_path(profile_path)
+                    if service_details: service_name = service_details['name']
+                    break
+        elif hasattr(current_widget, '__class__'):
+            # For internal widgets, use their class name or a predefined name
+            if current_widget == self.welcome_widget: service_name = "Bienvenida"
+            elif current_widget == self.notes_widget: service_name = "Notas"
+            elif current_widget == self.kanban_widget: service_name = "Kanban"
+            elif current_widget == self.gantt_chart_widget: service_name = "Gantt"
+            elif current_widget == self.checklist_widget: service_name = "Checklist"
+            elif current_widget == self.reminders_widget: service_name = "Recordatorios"
+            elif current_widget == self.rss_reader_widget: service_name = "Lector RSS"
+            elif current_widget == self.vault_widget: service_name = "Bóveda"
+            elif current_widget == self.search_results_widget: service_name = "Búsqueda"
+            # Add other internal widgets here
+
+        self.metrics_manager.start_tracking(service_name)
 
     def show_productivity_tools(self):
         # This method is now obsolete, but kept for compatibility until sidebar is fully refactored
@@ -298,6 +293,7 @@ class MainWindow(QMainWindow):
         results = search_manager.search_all(query)
         self.search_results_widget.display_results(results, query)
         self.web_view_stack.setCurrentWidget(self.search_results_widget)
+        self.track_current_widget_usage()
 
     def on_search_result_clicked(self, result_data):
         result_type = result_data.get('type')

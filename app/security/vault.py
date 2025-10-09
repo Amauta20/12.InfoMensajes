@@ -87,3 +87,20 @@ class Vault:
         except Exception as e:
             print(f"Error decrypting secret: {e}")
             return None
+
+    def get_all_secret_ids(self) -> list[str]:
+        """Retrieves all secret IDs from the database, excluding internal ones."""
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM credentials WHERE id != '_vault_test_' ORDER BY id")
+        rows = cursor.fetchall()
+        conn.close()
+        return [row['id'] for row in rows]
+
+    def delete_secret(self, secret_id: str):
+        """Deletes a secret from the database."""
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM credentials WHERE id = ?", (secret_id,))
+        conn.commit()
+        conn.close()

@@ -15,6 +15,7 @@ class Sidebar(QWidget):
     show_checklist_requested = Signal() # New signal to show ChecklistWidget
     show_reminders_requested = Signal() # New signal to show RemindersWidget
     show_rss_reader_requested = Signal() # New signal to show RssReaderWidget
+    show_vault_requested = Signal()
 
     def __init__(self):
         super().__init__()
@@ -66,6 +67,10 @@ class Sidebar(QWidget):
         self.rss_reader_button.clicked.connect(self.show_rss_reader_requested.emit)
         self.layout.addWidget(self.rss_reader_button)
 
+        self.vault_button = QPushButton("Bóveda")
+        self.vault_button.clicked.connect(self.show_vault_requested.emit)
+        self.layout.addWidget(self.vault_button)
+
     # --- Service Management Methods ---
     def open_select_service_dialog(self):
         dialog = SelectServiceDialog(self)
@@ -92,7 +97,7 @@ class Sidebar(QWidget):
             if child.widget():
                 child.widget().deleteLater()
 
-        services = service_manager.get_all_services()
+        services = service_manager.get_user_services()
 
         for service in services:
             btn = QPushButton(service['name'])

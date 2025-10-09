@@ -11,7 +11,7 @@ class ViewKanbanCardDetailsDialog(QDialog):
 
         def format_datetime(dt_str):
             if not dt_str: return "N/A"
-            utc_dt = QDateTime.fromString(dt_str, Qt.ISODate)
+            utc_dt = QDateTime.fromString(dt_str, Qt.DateFormat.ISODate)
             return utc_dt.toLocalTime().toString("dd/MM/yyyy HH:mm")
 
         self.title_label = QLabel(f"<b>Título:</b> {card_details['title']}")
@@ -35,6 +35,6 @@ class ViewKanbanCardDetailsDialog(QDialog):
         self.due_date_label = QLabel(f"<b>Fecha de Entrega:</b> {format_datetime(card_details['due_date'])}")
         self.layout.addWidget(self.due_date_label)
 
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok)
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
         button_box.accepted.connect(self.accept)
         self.layout.addWidget(button_box)

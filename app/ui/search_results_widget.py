@@ -45,7 +45,7 @@ class SearchResultsWidget(QWidget):
             # Add a header for the group
             header_item = QListWidgetItem()
             header_label = QLabel(f'<b>{type_names.get(result_type, result_type.capitalize())}</b>')
-            header_item.setFlags(header_item.flags() & ~Qt.ItemIsSelectable)
+            header_item.setFlags(header_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
             self.results_list.addItem(header_item)
             self.results_list.setItemWidget(header_item, header_label)
 
@@ -56,7 +56,7 @@ class SearchResultsWidget(QWidget):
 
                 label = QLabel()
                 label.setWordWrap(True)
-                label.setTextFormat(Qt.RichText)
+                label.setTextFormat(Qt.TextFormat.RichText)
 
                 if result_type == 'note':
                     content = result['content']

@@ -158,11 +158,10 @@ class KanbanWidget(QWidget):
                     f"Entregar: {assignee_value} | {due_date_value}\n"
                     f"Iniciado: {format_datetime(card['started_at'])}"
                 )
-            else:
+            else: # Assuming other columns are 'Done' or similar
                 item_text = (
                     f"{card['title']}\n"
                     f"Encargado: {assignee_value} {due_date_value}\n"
-                    f"Creada: {format_datetime(card['created_at'])}\n"
                     f"Iniciada: {format_datetime(card['started_at'])}\n"
                     f"Finalizada: {format_datetime(card['finished_at'])}"
                 )

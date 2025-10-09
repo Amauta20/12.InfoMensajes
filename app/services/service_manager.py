@@ -17,10 +17,15 @@ def get_all_services():
     """Retrieves all added services from the database."""
     conn = get_db_connection()
     services = conn.execute("SELECT * FROM services WHERE is_active = 1 ORDER BY name").fetchall()
-    conn.close()
     return services
 
-def add_service(name, url, icon=None):
+def get_user_services():
+    """Retrieves only user-added services (where is_internal is False)."""
+    conn = get_db_connection()
+    services = conn.execute("SELECT * FROM services WHERE is_active = 1 AND is_internal = 0 ORDER BY name").fetchall()
+    return services
+
+def add_service(name, url, icon=None, is_internal=False):
     """Adds a new service to the database."""
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -35,8 +40,8 @@ def add_service(name, url, icon=None):
 
     try:
         cursor.execute(
-            "INSERT INTO services (name, url, icon, profile_path) VALUES (?, ?, ?, ?)",
-            (name, url, icon, profile_path)
+            "INSERT INTO services (name, url, icon, profile_path, is_internal) VALUES (?, ?, ?, ?, ?)",
+            (name, url, icon, profile_path, is_internal)
         )
         conn.commit()
         service_id = cursor.lastrowid
@@ -51,6 +56,20 @@ def add_service(name, url, icon=None):
     
     return service_id
 
+def get_service_by_name(name):
+    """Retrieves full details of a service by its name."""
+    conn = get_db_connection()
+    service = conn.execute("SELECT id, name, url, icon, profile_path, is_internal FROM services WHERE name = ?", (name,)).fetchone()
+    conn.close()
+    return service
+
+def get_service_by_profile_path(profile_path):
+    """Retrieves full details of a service by its profile path."""
+    conn = get_db_connection()
+    service = conn.execute("SELECT id, name, url, icon, profile_path, is_internal FROM services WHERE profile_path = ?", (profile_path,)).fetchone()
+    conn.close()
+    return service
+
 def delete_service(service_id):
     """Deletes a service from the database and removes its profile directory."""
     conn = get_db_connection()
@@ -63,7 +82,7 @@ def delete_service(service_id):
 
     cursor.execute("DELETE FROM services WHERE id = ?", (service_id,))
     conn.commit()
-    conn.close()
+    # conn.close() # Managed by calling context
 
     # Remove profile directory if it exists
     if profile_path and os.path.exists(profile_path):
@@ -104,8 +123,8 @@ def update_service_name(service_id, new_name):
     # Update DB
     cursor.execute("UPDATE services SET name = ?, profile_path = ? WHERE id = ?", (new_name, new_profile_path, service_id))
     conn.commit()
-    conn.close()
-    return True
+    # conn.close() # Managed by calling context
+    return service_id
 
 def get_service_by_id(service_id):
     """Retrieves full details of a service by its ID."""
