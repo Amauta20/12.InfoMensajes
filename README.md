@@ -5,8 +5,8 @@ Un hub de escritorio para unificar mensajería y productividad, construido con P
 ## 📖 Tabla de Contenidos
 
 - [✨ Principios](#-principios)
+- [🤔 ¿Por qué InfoMensajero?](#-por-qué-infomensajero)
 - [🚀 Características](#-características)
-- [✨ Funcionalidades de IA](#-funcionalidades-de-ia)
 - [🛠️ Stack Tecnológico](#️-stack-tecnológico)
 - [🏁 Cómo Empezar](#-cómo-empezar)
   - [Prerrequisitos](#prerrequisitos)
@@ -25,6 +25,10 @@ Un hub de escritorio para unificar mensajería y productividad, construido con P
 *   **Seguro**: Cifrado local fuerte para tus credenciales y datos sensibles.
 *   **Open Source**: Código abierto bajo licencia MIT.
 
+## 🤔 ¿Por qué InfoMensajero?
+
+En la era digital, la información y la comunicación están fragmentadas en múltiples plataformas. InfoMensajero nace de la necesidad de unificar estas experiencias en un solo lugar, ofreciendo un entorno privado, seguro y eficiente. Olvídate de alternar entre docenas de pestañas y aplicaciones; centraliza tu vida digital y recupera el control de tu productividad.
+
 ## 🚀 Características
 
 *   **Servicios Embebidos**: Integra WhatsApp, Telegram, Slack, Gmail, etc., en pestañas con perfiles de sesión aislados.
@@ -40,11 +44,6 @@ Un hub de escritorio para unificar mensajería y productividad, construido con P
 *   **Búsqueda Global**: Busca en todas tus notas y tarjetas kanban localmente con un índice FTS5.
 *   **Bóveda Segura**: Almacena API keys y otras credenciales de forma segura usando criptografía estándar (scrypt + AES-GCM).
 
-## ✨ Funcionalidades de IA
-
-*   **Resumen Inteligente**: Genera resúmenes concisos de conversaciones o documentos extensos.
-*   **Traducción Instantánea**: Traduce mensajes o textos en tiempo real dentro de la aplicación.
-*   **Atajos Avanzados**: Automatiza tareas repetitivas con comandos de voz o texto personalizados.
 
 ## 🛠️ Stack Tecnológico
 
@@ -57,25 +56,27 @@ Un hub de escritorio para unificar mensajería y productividad, construido con P
 
 ## 🏁 Cómo Empezar
 
+Sigue estos sencillos pasos para poner en marcha InfoMensajero en tu sistema:
+
 ### Prerrequisitos
 
-Asegúrate de tener Python 3.10 o superior instalado.
+Asegúrate de tener Python 3.10 o superior instalado en tu sistema. Puedes descargarlo desde [python.org](https://www.python.org/downloads/).
 
 ### Instalación
 
-1.  Clona el repositorio:
+1.  **Clona el repositorio** a tu máquina local:
     ```bash
     git clone https://github.com/tu-usuario/InfoMensajero.git
     cd InfoMensajero
     ```
 
-2.  Crea un entorno virtual e instala las dependencias:
+2.  **Crea y activa un entorno virtual** (recomendado) e instala las dependencias necesarias:
     ```bash
-    # Windows
+    # Para Windows
     python -m venv venv
     .\venv\Scripts\activate
     
-    # macOS/Linux
+    # Para macOS/Linux
     python3 -m venv venv
     source venv/bin/activate
 
@@ -83,6 +84,8 @@ Asegúrate de tener Python 3.10 o superior instalado.
     ```
 
 ### Ejecución
+
+Una vez instalado, puedes iniciar la aplicación:
 
 ```bash
 python main.py
@@ -97,8 +100,10 @@ Una vez iniciada la aplicación, verás una barra lateral a la izquierda. Desde 
 
 ## 🗺️ Roadmap
 
+Nuestro camino hacia una productividad sin fisuras:
+
 *   **Fase 1 (MVP)**: Servicios embebidos, notas, kanban, búsqueda local y bóveda de seguridad.
-*   **Fase 2 (Implementada)**: Integración de IA (resumir, traducir), atajos avanzados y notificaciones silenciosas.
+*   **Fase 2 (Completada)**: Integración de IA (resumir, traducir), atajos avanzados y notificaciones silenciosas. **(¡Novedad! Indicador visual de mensajes no leídos para servicios web clave)**
 *   **Fase 3**: Conectores OAuth para indexación de mensajes (Gmail, Outlook, Slack).
 *   **Fase 4**: Multi-ventana, vistas divididas y reglas de concentración.
 
@@ -113,3 +118,7 @@ Este proyecto está bajo la **Licencia MIT**. Consulta el archivo `LICENSE` para
 ## 📞 Contacto
 
 Para preguntas o soporte, por favor abre un issue en el repositorio de GitHub.
+
+---
+
+¡Gracias por usar InfoMensajero! Esperamos que te ayude a simplificar tu vida digital y a potenciar tu productividad.

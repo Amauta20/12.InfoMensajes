@@ -340,6 +340,11 @@ class MainWindow(QMainWindow):
         """
         Loads a service in its own profile and view, creating it if it doesn't exist.
         """
+        service_details = service_manager.get_service_by_profile_path(profile_path)
+        if not service_details: # Handle case where service_details might not be found
+            print(f"Error: Service details not found for profile_path: {profile_path}")
+            return
+
         if profile_path in self.web_views:
             view = self.web_views[profile_path]
         else:
