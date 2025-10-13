@@ -19,6 +19,7 @@ class Sidebar(QWidget):
 
     def __init__(self):
         super().__init__()
+        self._unread_statuses = {} # {service_id: True/False}
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(5, 5, 5, 5)
         self.layout.setSpacing(5)
@@ -99,11 +100,17 @@ class Sidebar(QWidget):
 
         services = service_manager.get_user_services()
 
+        self._unread_statuses = {s['id']: self._unread_statuses.get(s['id'], False) for s in services} # Preserve existing unread statuses
+
         for service in services:
             btn = QPushButton(service['name'])
             btn.setProperty('service_id', service['id']) # Store service_id in button property
             btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             btn.customContextMenuRequested.connect(lambda pos, b=btn: self.show_service_context_menu(pos, b))
+
+            # Apply unread style if applicable
+            if self._unread_statuses.get(service['id'], False):
+                btn.setProperty('class', 'unread') # Apply CSS class
 
             url = service['url']
             profile_path = service['profile_path']
@@ -157,3 +164,8 @@ class Sidebar(QWidget):
         service_manager.delete_service(service_id)
         self.load_services() # Refresh the service list
         self.service_deleted.emit(service_id) # Notify MainWindow to remove webview
+
+    def set_service_unread_status(self, service_id, has_unread):
+        if service_id in self._unread_statuses:
+            self._unread_statuses[service_id] = has_unread
+            self.load_services() # Refresh UI to apply/remove unread style

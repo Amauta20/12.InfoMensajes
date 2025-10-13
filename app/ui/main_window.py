@@ -31,6 +31,36 @@ class MainWindow(QMainWindow):
     def __init__(self, metrics_manager_instance):
         super().__init__()
         self.metrics_manager = metrics_manager_instance
+
+        # Dictionary to store service-specific JavaScript for unread message detection
+        self._service_unread_js_scripts = {
+            "WhatsApp": '''
+                (function() {
+                    // WhatsApp Web unread message indicator
+                    // This selector might need adjustment if WhatsApp Web's DOM changes.
+                    var unread = document.querySelector('._1gL0j, [aria-label*="unread" i]');
+                    return unread !== null;
+                })();
+            ''',
+            "Teams": '''
+                (function() {
+                    // Microsoft Teams unread message indicator
+                    // This selector might need adjustment.
+                    var unread = document.querySelector('.activity-badge, [data-tid="unseen-count"]');
+                    return unread !== null;
+                })();
+            ''',
+            "LinkedIn": '''
+                (function() {
+                    // LinkedIn unread message indicator
+                    // This selector might need adjustment.
+                    var unread = document.querySelector('.msg-overlay-bubble--is-active, .notification-badge--show');
+                    return unread !== null;
+                })();
+            ''',
+            # Add more services here
+        }
+
         self.setWindowTitle("InfoMensajero")
         self.setGeometry(100, 100, 1280, 720)
 
@@ -322,12 +352,15 @@ class MainWindow(QMainWindow):
 
             view = QWebEngineView()
             view.setPage(QWebEnginePage(profile, view)) # Create a page with the profile and set it to the view
+            view.setProperty('service_id', service_details['id']) # Store service_id
+            view.loadFinished.connect(self._on_web_view_load_finished)
             view.setUrl(QUrl(url))
             
             self.web_views[profile_path] = view
             self.web_view_stack.addWidget(view)
 
         self.web_view_stack.setCurrentWidget(view)
+        self.track_current_widget_usage() # Track usage for web views
 
     def remove_webview_for_service(self, service_id):
         # Find the profile_path associated with the service_id
@@ -344,6 +377,59 @@ class MainWindow(QMainWindow):
             # If the removed view was the current one, switch to a default view
             if self.web_view_stack.currentWidget() == view_to_remove:
                 self.load_initial_page() # Reload initial page (welcome or first service)
+
+    def remove_webview_for_service(self, service_id):
+        # Find the profile_path associated with the service_id
+        service_details = service_manager.get_service_by_id(service_id)
+        if not service_details: return
+
+        profile_path = service_details['profile_path']
+
+        if profile_path in self.web_views:
+            view_to_remove = self.web_views.pop(profile_path) # Remove from cache
+            self.web_view_stack.removeWidget(view_to_remove) # Remove from stack
+            view_to_remove.deleteLater() # Schedule for deletion
+
+            # If the removed view was the current one, switch to a default view
+            if self.web_view_stack.currentWidget() == view_to_remove:
+                self.load_initial_page() # Reload initial page (welcome or first service)
+
+    def _on_web_view_load_finished(self, ok):
+        view = self.sender() # The QWebEngineView that emitted the signal
+        if not ok: # Page failed to load
+            print(f"Page failed to load: {view.url().toString()}")
+            return
+
+        service_id = view.property('service_id')
+        if service_id:
+            self._check_unread_messages_for_service(service_id, view)
+
+    def _check_unread_messages_for_service(self, service_id, view):
+        service_details = service_manager.get_service_by_id(service_id)
+        if not service_details: return
+
+        service_name = service_details['name']
+        js_script = self._service_unread_js_scripts.get(service_name, '''
+            (function() {
+                // Generic placeholder: You MUST customize this for each service.
+                var unreadIndicator = document.querySelector('.unread-count, .badge-unread, [aria-label*="unread messages" i]');
+                if (unreadIndicator) {
+                    var text = unreadIndicator.innerText.trim();
+                    if (text && !isNaN(parseInt(text))) {
+                        return parseInt(text) > 0; // Return true if count > 0
+                    } else {
+                        return true; // Indicator present, assume unread
+                    }
+                }
+                return false; // No unread indicator found
+            })();
+        ''')
+
+        view.page().runJavaScript(js_script, lambda result: self._handle_unread_result(service_id, result))
+
+    def _handle_unread_result(self, service_id, has_unread):
+        print(f"Service {service_id} has unread messages: {has_unread}")
+        self.sidebar.set_service_unread_status(service_id, has_unread)
 
     def load_initial_page(self):
         """
