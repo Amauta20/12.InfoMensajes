@@ -1,8 +1,15 @@
 import sqlite3
 import os
+from pathlib import Path
 
-# Define the path for the database in the project root
-DB_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "infomensajero.db")
+def get_app_data_dir():
+    """Gets the application data directory and creates it if it doesn't exist."""
+    app_data_dir = Path(os.getenv('APPDATA')) / 'InfoMensajes-Power'
+    app_data_dir.mkdir(parents=True, exist_ok=True)
+    return app_data_dir
+
+# Define the path for the database in the app data directory
+DB_FILE = get_app_data_dir() / "infomensajero.db"
 
 def get_db_connection():
     """Creates a database connection."""

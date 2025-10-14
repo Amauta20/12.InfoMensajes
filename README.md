@@ -12,6 +12,7 @@ Un hub de escritorio para unificar mensajería y productividad, construido con P
   - [Prerrequisitos](#prerrequisitos)
   - [Instalación](#instalación)
   - [Ejecución](#ejecución)
+- [⬇️ Descarga](#descarga)
 - [💡 Cómo Usar](#-cómo-usar)
 - [🗺️ Roadmap](#️-roadmap)
 - [🤝 Contribuciones](#-contribuciones)
@@ -90,6 +91,12 @@ Una vez instalado, puedes iniciar la aplicación:
 ```bash
 python main.py
 ```
+
+## ⬇️ Descarga
+
+Puedes descargar el instalador para Windows desde el siguiente enlace:
+
+[**Descargar InfoMensajero.exe**](http://cibertec.org/Descarga/InfoMensajero.exe)
 
 ## 💡 Cómo Usar
 
