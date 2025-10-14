@@ -96,7 +96,7 @@ python main.py
 
 Puedes descargar el instalador para Windows desde el siguiente enlace:
 
-[**Descargar InfoMensajero.exe**](http://cibertec.org/Descarga/InfoMensajero.exe)
+https://cibertec.org/Descarga/InfoMensajero.exe
 
 ## 💡 Cómo Usar
 
