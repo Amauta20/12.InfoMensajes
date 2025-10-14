@@ -6,6 +6,12 @@ __pycache__/
 # Database
 infomensajero.db
 infomensajero.db-*
+Ejecutable.zip_*
+Ejecutable.zip
 
 # User profiles
 profiles/
+build/
+dist/
+Ejecutable/
+.pytest_cache/

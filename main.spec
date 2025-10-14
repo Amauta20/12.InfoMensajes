@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('app', 'app'), ('infomensajero.db', '.')],
+    datas=[('app', 'app'), ('assets', 'assets')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
