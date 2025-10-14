@@ -2,7 +2,9 @@ from PyQt6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QSplitter, QStack
 from PyQt6.QtCore import Qt, QUrl, QTimer, QDateTime
 from PyQt6.QtGui import QKeySequence, QShortcut, QIcon
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
+from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage, QWebEngineScript
+from PyQt6.QtWebChannel import QWebChannel
+from PyQt6.QtCore import QObject, pyqtSlot
 import os
 
 from app.ui.sidebar import Sidebar
@@ -26,6 +28,111 @@ from app.metrics.metrics_manager import MetricsManager
 
 from app.ui.select_service_dialog import SelectServiceDialog
 from app.ui.unified_settings_dialog import UnifiedSettingsDialog
+from PyQt6.QtGui import QDesktopServices
+
+from PyQt6.QtWidgets import QMenu, QApplication, QStyle
+from PyQt6.QtGui import QAction
+
+class LinkHandlingPage(QWebEnginePage):
+    def acceptNavigationRequest(self, url, _type, isMainFrame):
+        if _type == QWebEnginePage.NavigationType.NavigationTypeLinkClicked:
+            if self.url().host() != url.host():
+                QDesktopServices.openUrl(url)
+                return False
+        return super().acceptNavigationRequest(url, _type, isMainFrame)
+
+class CustomWebEngineView(QWebEngineView):
+    def contextMenuEvent(self, event):
+        pos = event.globalPos()
+        js_script = f"""
+            (function() {{
+                let element = document.elementFromPoint({event.pos().x()}, {event.pos().y()});
+                let isContentEditable = element.isContentEditable;
+                let linkUrl = '';
+                let linkText = '';
+                
+                // Find the anchor tag
+                while (element && element.tagName !== 'A') {{
+                    element = element.parentElement;
+                }}
+                
+                if (element) {{
+                    linkUrl = element.href;
+                    linkText = element.textContent;
+                }}
+                
+                return {{
+                    'isContentEditable': isContentEditable,
+                    'linkUrl': linkUrl,
+                    'linkText': linkText
+                }};
+            }})();
+        """
+        self.page().runJavaScript(js_script, lambda result: self._build_context_menu(result, pos))
+
+    def _build_context_menu(self, data, pos):
+        menu = QMenu(self)
+        style = QApplication.style()
+
+        # Standard navigation actions
+        action_back = menu.addAction("Atrás")
+        action_back.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_ArrowBack))
+        action_back.triggered.connect(lambda: self.page().triggerAction(QWebEnginePage.WebAction.Back))
+        action_back.setEnabled(self.page().history().canGoBack())
+
+        action_forward = menu.addAction("Adelante")
+        action_forward.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_ArrowForward))
+        action_forward.triggered.connect(lambda: self.page().triggerAction(QWebEnginePage.WebAction.Forward))
+        action_forward.setEnabled(self.page().history().canGoForward())
+
+        action_reload = menu.addAction("Recargar")
+        action_reload.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
+        action_reload.triggered.connect(lambda: self.page().triggerAction(QWebEnginePage.WebAction.Reload))
+
+        action_stop = menu.addAction("Detener")
+        action_stop.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_BrowserStop))
+        action_stop.triggered.connect(lambda: self.page().triggerAction(QWebEnginePage.WebAction.Stop))
+        action_stop.setEnabled(self.page().isLoading())
+
+        if data and (data.get('linkUrl') or data.get('isContentEditable')):
+            menu.addSeparator()
+
+        if data and data.get('linkUrl'):
+            link_url = QUrl(data['linkUrl'])
+            action_open_external = menu.addAction("Abrir enlace en navegador externo")
+            action_open_external.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_FileIcon))
+            action_open_external.triggered.connect(lambda: QDesktopServices.openUrl(link_url))
+            
+            action_copy_link = menu.addAction("Copiar dirección de enlace")
+            action_copy_link.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_TitleBarContextHelpButton))
+            action_copy_link.triggered.connect(lambda: QApplication.clipboard().setText(link_url.toString()))
+
+        if data and data.get('isContentEditable'):
+            if data.get('linkUrl'):
+                menu.addSeparator()
+                
+            action_undo = menu.addAction("Deshacer")
+            action_undo.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaSeekBackward))
+            action_undo.triggered.connect(lambda: self.page().triggerAction(QWebEnginePage.WebAction.Undo))
+            action_redo = menu.addAction("Rehacer")
+            action_redo.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaSeekForward))
+            action_redo.triggered.connect(lambda: self.page().triggerAction(QWebEnginePage.WebAction.Redo))
+            menu.addSeparator()
+            action_cut = menu.addAction("Cortar")
+            action_cut.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton))
+            action_cut.triggered.connect(lambda: self.page().triggerAction(QWebEnginePage.WebAction.Cut))
+            action_copy = menu.addAction("Copiar")
+            action_copy.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))
+            action_copy.triggered.connect(lambda: self.page().triggerAction(QWebEnginePage.WebAction.Copy))
+            action_paste = menu.addAction("Pegar")
+            action_paste.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton))
+            action_paste.triggered.connect(lambda: self.page().triggerAction(QWebEnginePage.WebAction.Paste))
+            action_select_all = menu.addAction("Seleccionar todo")
+            action_select_all.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_FileDialogListView))
+            action_select_all.triggered.connect(lambda: self.page().triggerAction(QWebEnginePage.WebAction.SelectAll))
+
+        if not menu.isEmpty():
+            menu.exec(pos)
 
 class MainWindow(QMainWindow):
     def __init__(self, metrics_manager_instance):
@@ -173,9 +280,14 @@ class MainWindow(QMainWindow):
 
         # Notification system
         self.tray_icon = QSystemTrayIcon(self)
-        icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'icon.png'))
+        icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'icon.ico'))
+        print(f"Icon path: {icon_path}")
+        print(f"Icon file exists: {os.path.exists(icon_path)}")
         self.tray_icon.setIcon(QIcon(icon_path))
         self.tray_icon.show()
+
+        # Set application window icon
+        self.setWindowIcon(QIcon(icon_path))
 
         self.notification_timer = QTimer(self)
         self.notification_timer.timeout.connect(self.check_for_notifications)
@@ -190,6 +302,23 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         self.metrics_manager.stop_tracking_current()
         super().closeEvent(event)
+
+    def _handle_download_requested(self, download):
+        downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
+        if not os.path.exists(downloads_path):
+            os.makedirs(downloads_path)
+            
+        file_name = download.downloadFileName()
+        if not file_name:
+            file_name = os.path.basename(download.url().path())
+        
+        download.setDownloadDirectory(downloads_path)
+        if file_name:
+            download.setDownloadFileName(file_name)
+            
+        download.accept()
+        
+        self.show_notification("Descarga Aceptada", f"El archivo se está descargando en {downloads_path}")
 
     def show_notification(self, title, message):
         self.tray_icon.showMessage(title, message, QSystemTrayIcon.MessageIcon.Information, 5000)
@@ -354,10 +483,12 @@ class MainWindow(QMainWindow):
             profile.setPersistentStoragePath(profile_path) # Set the actual storage path
             # Spoof user agent to a recent Chrome version for better compatibility
             profile.setHttpUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            profile.downloadRequested.connect(self._handle_download_requested)
 
-            view = QWebEngineView()
-            view.setPage(QWebEnginePage(profile, view)) # Create a page with the profile and set it to the view
-            view.setProperty('service_id', service_details['id']) # Store service_id
+            view = CustomWebEngineView()
+            page = LinkHandlingPage(profile, view)
+            view.setPage(page)
+            view.setProperty('service_id', service_details['id'])
             view.loadFinished.connect(self._on_web_view_load_finished)
             view.setUrl(QUrl(url))
             
