@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QDateTimeEdit, QDialogButtonBox
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QDateTimeEdit, QDialogButtonBox, QDateEdit, QTimeEdit, QHBoxLayout
 from PyQt6.QtCore import QDateTime, Qt
 from app.utils import time_utils
 from app.db import settings_manager
@@ -13,11 +13,18 @@ class AddReminderDialog(QDialog):
         self.text_input.setPlaceholderText("Texto del recordatorio")
         self.layout.addWidget(self.text_input)
 
-        self.datetime_input = QDateTimeEdit()
-        self.datetime_input.setDateTime(time_utils.get_current_qdatetime())
-        self.datetime_input.setCalendarPopup(True)
-        self.datetime_input.setDisplayFormat(time_utils.convert_strftime_to_qt_format(settings_manager.get_datetime_format()))
-        self.layout.addWidget(self.datetime_input)
+        datetime_layout = QHBoxLayout()
+        self.date_input = QDateEdit()
+        self.date_input.setDateTime(time_utils.get_current_qdatetime())
+        self.date_input.setCalendarPopup(True)
+        self.date_input.setDisplayFormat(time_utils.convert_strftime_to_qt_format(settings_manager.get_date_format()))
+        datetime_layout.addWidget(self.date_input)
+
+        self.time_input = QTimeEdit()
+        self.time_input.setDateTime(time_utils.get_current_qdatetime())
+        self.time_input.setDisplayFormat(time_utils.convert_strftime_to_qt_format(settings_manager.get_time_format()))
+        datetime_layout.addWidget(self.time_input)
+        self.layout.addLayout(datetime_layout)
 
         self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.buttons.accepted.connect(self.accept)
@@ -25,4 +32,4 @@ class AddReminderDialog(QDialog):
         self.layout.addWidget(self.buttons)
 
     def get_data(self):
-        return self.text_input.text(), self.datetime_input.dateTime()
+        return self.text_input.text(), QDateTime(self.date_input.date(), self.time_input.time())

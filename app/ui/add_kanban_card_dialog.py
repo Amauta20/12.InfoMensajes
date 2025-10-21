@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QTextEdit, QPushButton, QLabel, QMessageBox, QDateTimeEdit
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QTextEdit, QPushButton, QLabel, QMessageBox, QDateEdit, QTimeEdit
 from PyQt6.QtCore import Qt, QDateTime
 from app.utils import time_utils
 from app.db import settings_manager
@@ -35,12 +35,20 @@ class AddKanbanCardDialog(QDialog):
 
         # Due Date input
         self.due_date_label = QLabel("Fecha de Entrega:")
-        self.due_date_input = QDateTimeEdit()
-        self.due_date_input.setCalendarPopup(True)
-        self.due_date_input.setDisplayFormat(time_utils.convert_strftime_to_qt_format(settings_manager.get_datetime_format()))
-        self.due_date_input.setDateTime(time_utils.get_current_qdatetime())
         self.layout.addWidget(self.due_date_label)
-        self.layout.addWidget(self.due_date_input)
+
+        datetime_layout = QHBoxLayout()
+        self.date_input = QDateEdit()
+        self.date_input.setCalendarPopup(True)
+        self.date_input.setDisplayFormat(time_utils.convert_strftime_to_qt_format(settings_manager.get_date_format()))
+        self.date_input.setDateTime(time_utils.get_current_qdatetime())
+        datetime_layout.addWidget(self.date_input)
+
+        self.time_input = QTimeEdit()
+        self.time_input.setDisplayFormat(time_utils.convert_strftime_to_qt_format(settings_manager.get_time_format()))
+        self.time_input.setDateTime(time_utils.get_current_qdatetime())
+        datetime_layout.addWidget(self.time_input)
+        self.layout.addLayout(datetime_layout)
 
         # Buttons
         self.button_layout = QHBoxLayout()
@@ -68,5 +76,5 @@ class AddKanbanCardDialog(QDialog):
         title = self.title_input.text().strip()
         description = self.description_editor.toPlainText().strip()
         assignee = self.assignee_input.text().strip()
-        due_date = self.due_date_input.dateTime()
+        due_date = QDateTime(self.date_input.date(), self.time_input.time())
         return title, description, assignee, due_date

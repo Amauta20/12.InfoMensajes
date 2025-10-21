@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton, QInputDialog, QMessageBox, QListWidgetItem, QCheckBox, QLineEdit, QSplitter, QLabel, QTabWidget, QDateTimeEdit, QDialog, QFormLayout, QSizePolicy
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton, QInputDialog, QMessageBox, QListWidgetItem, QCheckBox, QLineEdit, QSplitter, QLabel, QTabWidget, QDateTimeEdit, QDialog, QFormLayout, QSizePolicy, QDateEdit, QTimeEdit
 from PyQt6.QtGui import QIcon, QFont
 from PyQt6.QtCore import Qt, QDateTime, pyqtSignal as Signal
 from app.db import checklist_manager, kanban_manager, settings_manager
@@ -15,23 +15,32 @@ class EditChecklistItemDialog(QDialog):
         self.item_text_input = QLineEdit(current_text)
         self.form_layout.addRow("Texto del Item:", self.item_text_input)
 
-        self.due_date_input = QDateTimeEdit()
-        self.due_date_input.setCalendarPopup(True)
-        self.due_date_input.setDisplayFormat(time_utils.convert_strftime_to_qt_format(settings_manager.get_datetime_format()))
-        self.due_date_input.setMinimumDateTime(time_utils.get_current_qdatetime())
-        
+        self.due_date_edit = QDateEdit()
+        self.due_date_edit.setCalendarPopup(True)
+        self.due_date_edit.setMinimumDate(time_utils.get_current_qdatetime().date())
+
+        self.due_time_edit = QTimeEdit()
+
         self.enable_due_date_checkbox = QCheckBox("Habilitar Fecha de Vencimiento")
-        self.enable_due_date_checkbox.stateChanged.connect(self.due_date_input.setEnabled)
+        self.enable_due_date_checkbox.stateChanged.connect(self.due_date_edit.setEnabled)
+        self.enable_due_date_checkbox.stateChanged.connect(self.due_time_edit.setEnabled)
 
         if current_due_date:
-            self.due_date_input.setDateTime(current_due_date)
+            self.due_date_edit.setDate(current_due_date.date())
+            self.due_time_edit.setTime(current_due_date.time())
             self.enable_due_date_checkbox.setChecked(True)
-            self.due_date_input.setEnabled(True)
+            self.due_date_edit.setEnabled(True)
+            self.due_time_edit.setEnabled(True)
         else:
-            self.due_date_input.setDateTime(time_utils.get_current_qdatetime())
-            self.due_date_input.setEnabled(False)
+            self.due_date_edit.setDate(time_utils.get_current_qdatetime().date())
+            self.due_time_edit.setTime(time_utils.get_current_qdatetime().time())
+            self.due_date_edit.setEnabled(False)
+            self.due_time_edit.setEnabled(False)
 
-        self.form_layout.addRow("Fecha de Vencimiento:", self.due_date_input)
+        due_date_layout = QHBoxLayout()
+        due_date_layout.addWidget(self.due_date_edit)
+        due_date_layout.addWidget(self.due_time_edit)
+        self.form_layout.addRow("Fecha y Hora de Vencimiento:", due_date_layout)
         self.form_layout.addRow(self.enable_due_date_checkbox)
 
         self.layout.addLayout(self.form_layout)
@@ -49,7 +58,9 @@ class EditChecklistItemDialog(QDialog):
         text = self.item_text_input.text().strip()
         due_at = None
         if self.enable_due_date_checkbox.isChecked():
-            due_at = self.due_date_input.dateTime()
+            date = self.due_date_edit.date()
+            time = self.due_time_edit.time()
+            due_at = QDateTime(date, time)
         return text, due_at
 
 class AddChecklistItemDialog(QDialog):
@@ -62,17 +73,23 @@ class AddChecklistItemDialog(QDialog):
         self.item_text_input = QLineEdit()
         self.form_layout.addRow("Texto del Item:", self.item_text_input)
 
-        self.due_date_input = QDateTimeEdit()
-        self.due_date_input.setCalendarPopup(True)
-        self.due_date_input.setDisplayFormat(time_utils.convert_strftime_to_qt_format(settings_manager.get_datetime_format()))
-        self.due_date_input.setMinimumDateTime(time_utils.get_current_qdatetime())
-        self.due_date_input.setDateTime(time_utils.get_current_qdatetime())
-        self.due_date_input.setEnabled(False) # Initially disabled
+        self.due_date_edit = QDateEdit()
+        self.due_date_edit.setCalendarPopup(True)
+        self.due_date_edit.setMinimumDate(time_utils.get_current_qdatetime().date())
+        self.due_date_edit.setDate(time_utils.get_current_qdatetime().date())
+        self.due_date_edit.setEnabled(False)
+
+        self.due_time_edit = QTimeEdit()
+        self.due_time_edit.setMinimumTime(time_utils.get_current_qdatetime().time())
+        self.due_time_edit.setTime(time_utils.get_current_qdatetime().time())
+        self.due_time_edit.setEnabled(False)
 
         self.enable_due_date_checkbox = QCheckBox("Habilitar Fecha de Vencimiento")
-        self.enable_due_date_checkbox.stateChanged.connect(self.due_date_input.setEnabled)
-
-        self.form_layout.addRow("Fecha de Vencimiento:", self.due_date_input)
+        self.enable_due_date_checkbox.stateChanged.connect(self.due_date_edit.setEnabled)
+        due_date_layout = QHBoxLayout()
+        due_date_layout.addWidget(self.due_date_edit)
+        due_date_layout.addWidget(self.due_time_edit)
+        self.form_layout.addRow("Fecha y Hora de Vencimiento:", due_date_layout)
         self.form_layout.addRow(self.enable_due_date_checkbox)
 
         self.layout.addLayout(self.form_layout)
@@ -90,7 +107,9 @@ class AddChecklistItemDialog(QDialog):
         text = self.item_text_input.text().strip()
         due_at = None
         if self.enable_due_date_checkbox.isChecked():
-            due_at = self.due_date_input.dateTime()
+            date = self.due_date_edit.date()
+            time = self.due_time_edit.time()
+            due_at = QDateTime(date, time)
         return text, due_at
 
 class ChecklistWidget(QWidget):

@@ -53,6 +53,24 @@ def set_datetime_format(dt_format):
     """Saves the configured datetime format string."""
     set_setting("datetime_format", dt_format)
 
+def get_date_format():
+    """Retrieves the configured date format string."""
+    d_format = get_setting("date_format")
+    return d_format if d_format else "%Y-%m-%d" # Default format
+
+def set_date_format(d_format):
+    """Saves the configured date format string."""
+    set_setting("date_format", d_format)
+
+def get_time_format():
+    """Retrieves the configured time format string."""
+    t_format = get_setting("time_format")
+    return t_format if t_format else "%H:%M" # Default format
+
+def set_time_format(t_format):
+    """Saves the configured time format string."""
+    set_setting("time_format", t_format)
+
 def get_pomodoro_duration():
     duration = get_setting("pomodoro_duration")
     return int(duration) if duration else 25
