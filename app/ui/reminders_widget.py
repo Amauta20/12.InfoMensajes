@@ -7,8 +7,9 @@ from app.utils import time_utils
 class RemindersWidget(QWidget):
     reminders_updated = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, db_path):
         super().__init__()
+        self.db_path = db_path
         self.layout = QVBoxLayout(self)
 
         self.add_button = QPushButton("Nuevo Recordatorio")
@@ -22,7 +23,7 @@ class RemindersWidget(QWidget):
 
     def load_reminders(self):
         self.reminders_list.clear()
-        reminders = reminders_manager.get_all_reminders()
+        reminders = reminders_manager.get_all_reminders(self.db_path)
         for reminder in reminders:
             item_widget = self.create_reminder_item_widget(reminder)
             list_item = QListWidgetItem()
@@ -65,16 +66,16 @@ class RemindersWidget(QWidget):
             text, qdt = dialog.get_data()
             if text:
                 utc_dt_str = qdt.toUTC().toString(Qt.DateFormat.ISODate)
-                reminders_manager.create_reminder(text, utc_dt_str)
+                reminders_manager.create_reminder(self.db_path, text, utc_dt_str)
                 self.load_reminders()
                 self.reminders_updated.emit()
 
     def delete_reminder(self, reminder_id):
-        reminders_manager.delete_reminder(reminder_id)
+        reminders_manager.delete_reminder(self.db_path, reminder_id)
         self.load_reminders()
         self.reminders_updated.emit()
 
     def toggle_reminder_completed(self, reminder_id, state):
         is_completed = 1 if state == Qt.CheckState.Checked.value else 0
-        reminders_manager.update_reminder(reminder_id, is_completed=is_completed)
+        reminders_manager.update_reminder(self.db_path, reminder_id, is_completed=is_completed)
         self.reminders_updated.emit()

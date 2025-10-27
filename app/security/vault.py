@@ -15,8 +15,8 @@ SCRYPT_P = 1
 KEY_LENGTH = 32 # AES-256
 
 class Vault:
-    def __init__(self):
-        pass # No specific initialization needed for the Vault itself
+    def __init__(self, db_path):
+        self.db_path = db_path
 
     def _derive_key(self, passphrase: str, salt: bytes) -> bytes:
         kdf = Scrypt(
@@ -44,7 +44,7 @@ class Vault:
         nonce_b64 = base64.b64encode(nonce).decode('utf-8')
         salt_b64 = base64.b64encode(salt).decode('utf-8')
 
-        conn = get_db_connection()
+        conn = get_db_connection(self.db_path)
         cursor = conn.cursor()
         cursor.execute(
             "INSERT OR REPLACE INTO credentials (id, enc_blob, nonce, salt) VALUES (?, ?, ?, ?)",
@@ -55,7 +55,7 @@ class Vault:
 
     def get_secret(self, secret_id: str, passphrase: str) -> str | None:
         """Retrieves and decrypts a secret from the database."""
-        conn = get_db_connection()
+        conn = get_db_connection(self.db_path)
         cursor = conn.cursor()
         cursor.execute("SELECT enc_blob, nonce, salt FROM credentials WHERE id = ?", (secret_id,))
         row = cursor.fetchone()
@@ -90,7 +90,7 @@ class Vault:
 
     def get_all_secret_ids(self) -> list[str]:
         """Retrieves all secret IDs from the database, excluding internal ones."""
-        conn = get_db_connection()
+        conn = get_db_connection(self.db_path)
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM credentials WHERE id != '_vault_test_' ORDER BY id")
         rows = cursor.fetchall()
@@ -99,7 +99,7 @@ class Vault:
 
     def delete_secret(self, secret_id: str):
         """Deletes a secret from the database."""
-        conn = get_db_connection()
+        conn = get_db_connection(self.db_path)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM credentials WHERE id = ?", (secret_id,))
         conn.commit()

@@ -21,8 +21,9 @@ class NoteInput(QTextEdit):
         super().keyPressEvent(event)
 
 class NotesWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, db_path, parent=None):
         super().__init__(parent)
+        self.db_path = db_path
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(10, 10, 10, 10)
         self.layout.setSpacing(10)
@@ -60,7 +61,7 @@ class NotesWidget(QWidget):
     def add_note_from_input(self):
         content = self.note_input.toPlainText().strip()
         if content:
-            notes_manager.create_note(content)
+            notes_manager.create_note(self.db_path, content)
             self.note_input.clear()
             self.load_notes()
 
@@ -73,7 +74,7 @@ class NotesWidget(QWidget):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             new_content = dialog.get_new_content()
             if new_content and new_content != original_content:
-                notes_manager.update_note(note_id, new_content)
+                notes_manager.update_note(self.db_path, note_id, new_content)
                 self.load_notes()
 
     def show_note_context_menu(self, pos):
@@ -92,12 +93,12 @@ class NotesWidget(QWidget):
             menu.exec(list_widget.mapToGlobal(pos))
 
     def delete_note_from_ui(self, note_id):
-        notes_manager.delete_note(note_id)
+        notes_manager.delete_note(self.db_path, note_id)
         self.load_notes()
 
     def load_notes(self):
         self.notes_list.clear()
-        notes = notes_manager.get_all_notes()
+        notes = notes_manager.get_all_notes(self.db_path)
         for note in notes:
             snippet = note['content'].split('\n')[0] # First line as snippet
             

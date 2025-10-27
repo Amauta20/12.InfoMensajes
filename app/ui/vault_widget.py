@@ -5,8 +5,9 @@ from PyQt6.QtCore import Qt
 from app.security.vault_manager import vault_manager
 
 class VaultWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, db_path, parent=None):
         super().__init__(parent)
+        self.db_path = db_path
         self.layout = QVBoxLayout(self)
 
         self.status_label = QLabel("Bóveda Bloqueada. Por favor, desbloquéala.")
@@ -29,7 +30,7 @@ class VaultWidget(QWidget):
 
     def update_ui(self):
         """Updates the UI based on whether the vault is locked or unlocked."""
-        if vault_manager.is_locked():
+        if vault_manager.is_locked(self.db_path):
             self.status_label.show()
             self.unlock_button.show()
             self.secrets_list.hide()
@@ -44,7 +45,7 @@ class VaultWidget(QWidget):
     def unlock_vault(self):
         password, ok = QInputDialog.getText(self, 'Desbloquear Bóveda', 'Introduce tu contraseña maestra:', QLineEdit.EchoMode.Password)
         if ok and password:
-            if vault_manager.unlock(password):
+            if vault_manager.unlock(self.db_path, password):
                 QMessageBox.information(self, "Bóveda Desbloqueada", "La bóveda ha sido desbloqueada exitosamente.")
                 self.update_ui()
             else:
@@ -53,7 +54,7 @@ class VaultWidget(QWidget):
     def load_secrets(self):
         self.secrets_list.clear()
         try:
-            secret_ids = vault_manager.get_all_secret_ids()
+            secret_ids = vault_manager.get_all_secret_ids(self.db_path)
             for secret_id in secret_ids:
                 self.secrets_list.addItem(QListWidgetItem(secret_id))
         except Exception as e:
@@ -66,7 +67,7 @@ class VaultWidget(QWidget):
             plaintext, ok = QInputDialog.getText(self, 'Añadir Secreto', f'Valor para {secret_id}:')
             if ok and plaintext:
                 try:
-                    vault_manager.save_secret(secret_id, plaintext)
+                    vault_manager.save_secret(self.db_path, secret_id, plaintext)
                     QMessageBox.information(self, "Éxito", f"Secreto '{secret_id}' guardado de forma segura.")
                     self.load_secrets()
                 except Exception as e:
@@ -90,7 +91,7 @@ class VaultWidget(QWidget):
 
     def view_secret(self, secret_id):
         try:
-            plaintext = vault_manager.get_secret(secret_id)
+            plaintext = vault_manager.get_secret(self.db_path, secret_id)
             QMessageBox.information(self, f"Secreto: {secret_id}", plaintext)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo recuperar el secreto: {e}")
@@ -99,7 +100,7 @@ class VaultWidget(QWidget):
         reply = QMessageBox.question(self, "Confirmar Eliminación", f"¿Estás seguro de que quieres eliminar el secreto '{secret_id}'?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
             try:
-                vault_manager.delete_secret(secret_id)
+                vault_manager.delete_secret(self.db_path, secret_id)
                 self.load_secrets()
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"No se pudo eliminar el secreto: {e}")

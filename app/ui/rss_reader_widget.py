@@ -5,8 +5,9 @@ from app.db import rss_manager
 from app.ui.rss_article_item_widget import RssArticleItemWidget
 
 class RssReaderWidget(QWidget):
-    def __init__(self):
+    def __init__(self, db_path):
         super().__init__()
+        self.db_path = db_path
         self.current_feed_url = None
 
         self.layout = QHBoxLayout(self)
@@ -45,7 +46,7 @@ class RssReaderWidget(QWidget):
 
     def load_feeds(self):
         self.feed_list.clear()
-        feeds = rss_manager.get_all_feeds()
+        feeds = rss_manager.get_all_feeds(self.db_path)
         for feed in feeds:
             item = QListWidgetItem(feed['name'])
             item.setData(Qt.ItemDataRole.UserRole, feed['id'])
@@ -60,7 +61,7 @@ class RssReaderWidget(QWidget):
     def load_articles(self):
         self.article_list.clear()
         if self.current_feed_url:
-            articles = rss_manager.fetch_feed_items(self.current_feed_url)
+            articles = rss_manager.fetch_feed_items(self.db_path, self.current_feed_url)
             for article in articles:
                 item_widget = RssArticleItemWidget(
                     article['title'],
@@ -79,7 +80,7 @@ class RssReaderWidget(QWidget):
 
         url, ok = QInputDialog.getText(self, 'Añadir Feed RSS', 'URL del Feed:')
         if ok and url:
-            rss_manager.add_feed(name, url)
+            rss_manager.add_feed(self.db_path, name, url)
             self.load_feeds()
 
     def delete_feed(self):
@@ -88,7 +89,7 @@ class RssReaderWidget(QWidget):
             feed_id = selected_item.data(Qt.ItemDataRole.UserRole)
             reply = QMessageBox.question(self, 'Eliminar Feed', '¿Estás seguro de que quieres eliminar este feed?')
             if reply == QMessageBox.Yes:
-                rss_manager.delete_feed(feed_id)
+                rss_manager.delete_feed(self.db_path, feed_id)
                 self.load_feeds()
                 self.article_list.clear()
 

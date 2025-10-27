@@ -135,9 +135,10 @@ class CustomWebEngineView(QWebEngineView):
             menu.exec(pos)
 
 class MainWindow(QMainWindow):
-    def __init__(self, metrics_manager_instance):
+    def __init__(self, db_path, metrics_manager_instance):
         super().__init__()
         self.metrics_manager = metrics_manager_instance
+        self.db_path = db_path
 
         # Dictionary to store service-specific JavaScript for unread message detection
         self._service_unread_js_scripts = {
@@ -212,31 +213,31 @@ class MainWindow(QMainWindow):
         self.web_view_stack.addWidget(self.welcome_widget)
 
         # Notes Widget
-        self.notes_widget = NotesWidget()
+        self.notes_widget = NotesWidget(self.db_path)
         self.web_view_stack.addWidget(self.notes_widget)
 
         # Kanban Widget
-        self.kanban_widget = KanbanWidget()
+        self.kanban_widget = KanbanWidget(self.db_path)
         self.web_view_stack.addWidget(self.kanban_widget)
 
         # Gantt Chart Widget
-        self.gantt_chart_widget = GanttChartWidget()
+        self.gantt_chart_widget = GanttChartWidget(self.db_path)
         self.web_view_stack.addWidget(self.gantt_chart_widget)
 
         # Checklist Widget
-        self.checklist_widget = ChecklistWidget()
+        self.checklist_widget = ChecklistWidget(self.db_path)
         self.web_view_stack.addWidget(self.checklist_widget)
 
         # Reminders Widget
-        self.reminders_widget = RemindersWidget()
+        self.reminders_widget = RemindersWidget(self.db_path)
         self.web_view_stack.addWidget(self.reminders_widget)
 
         # RSS Reader Widget
-        self.rss_reader_widget = RssReaderWidget()
+        self.rss_reader_widget = RssReaderWidget(self.db_path)
         self.web_view_stack.addWidget(self.rss_reader_widget)
 
         # Vault Widget
-        self.vault_widget = VaultWidget()
+        self.vault_widget = VaultWidget(self.db_path)
         self.web_view_stack.addWidget(self.vault_widget)
 
         # Sidebar
@@ -328,25 +329,25 @@ class MainWindow(QMainWindow):
         pre_notification_offset_minutes = settings_manager.get_pre_notification_offset()
 
         # Check for pre-due reminders
-        pre_due_reminders = reminders_manager.get_pre_due_reminders(pre_notification_offset_minutes)
+        pre_due_reminders = reminders_manager.get_pre_due_reminders(self.db_path, pre_notification_offset_minutes)
         for reminder in pre_due_reminders:
             self.show_notification("Recordatorio Próximo", f"'{reminder['text']}' vence pronto ({reminder['due_at']})")
-            reminders_manager.update_reminder(reminder['id'], pre_notified_at=time_utils.to_utc(time_utils.datetime_from_qdatetime(time_utils.get_current_qdatetime())).isoformat())
+            reminders_manager.update_reminder(self.db_path, reminder['id'], pre_notified_at=time_utils.to_utc(time_utils.datetime_from_qdatetime(time_utils.get_current_qdatetime())).isoformat())
 
         # Check for pre-due checklist items
-        pre_due_checklist_items = checklist_manager.get_pre_due_checklist_items(pre_notification_offset_minutes)
+        pre_due_checklist_items = checklist_manager.get_pre_due_checklist_items(self.db_path, pre_notification_offset_minutes)
         for item in pre_due_checklist_items:
             self.show_notification("Tarea de Checklist Próxima", f"'{item['text']}' vence pronto ({item['due_at']})")
-            checklist_manager.update_checklist_item(item['id'], pre_notified_at=time_utils.to_utc(time_utils.datetime_from_qdatetime(time_utils.get_current_qdatetime())).isoformat())
+            checklist_manager.update_checklist_item(self.db_path, item['id'], pre_notified_at=time_utils.to_utc(time_utils.datetime_from_qdatetime(time_utils.get_current_qdatetime())).isoformat())
 
         # Check for due reminders
-        due_reminders = reminders_manager.get_actual_due_reminders()
+        due_reminders = reminders_manager.get_actual_due_reminders(self.db_path)
         for reminder in due_reminders:
             self.show_notification("Recordatorio", reminder['text'])
-            reminders_manager.update_reminder(reminder['id'], is_notified=1)
+            reminders_manager.update_reminder(self.db_path, reminder['id'], is_notified=1)
 
         # Check for due checklist items
-        due_checklist_items = checklist_manager.get_actual_due_checklist_items()
+        due_checklist_items = checklist_manager.get_actual_due_checklist_items(self.db_path)
         for item in due_checklist_items:
             self.show_notification("Tarea de Checklist", item['text'])
             checklist_manager.update_checklist_item(item['id'], is_notified=1)
@@ -390,7 +391,6 @@ class MainWindow(QMainWindow):
 
     def show_reminders_tools(self):
         self.web_view_stack.setCurrentWidget(self.reminders_widget)
-        self.track_current_widget_usage()
 
     def show_rss_reader_tools(self):
         self.web_view_stack.setCurrentWidget(self.rss_reader_widget)

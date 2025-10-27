@@ -2,9 +2,9 @@ from app.db.database import get_db_connection
 import datetime
 from app.utils import time_utils
 
-def create_reminder(text, due_at):
+def create_reminder(db_path, text, due_at):
     """Creates a new reminder."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     due_at_utc_str = time_utils.to_utc(due_at).isoformat() if isinstance(due_at, datetime.datetime) else due_at
     cursor.execute(
@@ -16,16 +16,16 @@ def create_reminder(text, due_at):
     conn.close()
     return new_id
 
-def get_all_reminders():
+def get_all_reminders(db_path):
     """Retrieves all reminders, ordered by due date."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     reminders = conn.execute("SELECT id, text, due_at, is_completed FROM reminders ORDER BY due_at ASC").fetchall()
     conn.close()
     return reminders
 
-def get_actual_due_reminders():
+def get_actual_due_reminders(db_path):
     """Retrieves all due and not notified reminders."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     now_utc = time_utils.to_utc(datetime.datetime.now()).isoformat()
     cursor.execute("SELECT id, text, due_at, pre_notified_at FROM reminders WHERE due_at <= ? AND is_completed = 0 AND is_notified = 0", (now_utc,))
@@ -39,9 +39,9 @@ def get_actual_due_reminders():
     conn.close()
     return reminders
 
-def get_pre_due_reminders(pre_notification_offset_minutes):
+def get_pre_due_reminders(db_path, pre_notification_offset_minutes):
     """Retrieves reminders that are due within the pre-notification offset and have not been pre-notified."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     now = datetime.datetime.now()
     now_utc = time_utils.to_utc(now)
@@ -61,9 +61,9 @@ def get_pre_due_reminders(pre_notification_offset_minutes):
     conn.close()
     return reminders
 
-def update_reminder(reminder_id, text=None, due_at=None, is_completed=None, is_notified=None, pre_notified_at=None):
+def update_reminder(db_path, reminder_id, text=None, due_at=None, is_completed=None, is_notified=None, pre_notified_at=None):
     """Updates a reminder."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     if text is not None:
         cursor.execute("UPDATE reminders SET text = ? WHERE id = ?", (text, reminder_id))
@@ -80,17 +80,17 @@ def update_reminder(reminder_id, text=None, due_at=None, is_completed=None, is_n
     conn.commit()
     conn.close()
 
-def delete_reminder(reminder_id):
+def delete_reminder(db_path, reminder_id):
     """Deletes a reminder."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM reminders WHERE id = ?", (reminder_id,))
     conn.commit()
     conn.close()
 
-def get_reminders_due_between(start_date, end_date):
+def get_reminders_due_between(db_path, start_date, end_date):
     """Retrieves reminders with a due date between the given dates."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     reminders = conn.execute("SELECT text, due_at FROM reminders WHERE due_at BETWEEN ? AND ?", (start_date, end_date)).fetchall()
     conn.close()
     return reminders

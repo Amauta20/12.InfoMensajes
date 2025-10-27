@@ -87,4 +87,3 @@ class MetricsManager:
         conn.commit()
         conn.close()
 
-

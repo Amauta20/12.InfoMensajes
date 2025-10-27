@@ -10,6 +10,9 @@ from app.db import kanban_manager
 from app.db import settings_manager
 
 class GanttBridge(QObject):
+    def __init__(self, db_path, parent=None):
+        super().__init__(parent)
+        self.db_path = db_path
     """
     Bridge object to allow communication from JavaScript (in QWebEngineView)
     to Python.
@@ -28,9 +31,10 @@ class GanttBridge(QObject):
             end_date_obj = datetime.datetime.strptime(end_date, "%Y-%m-%d %H:%M")
 
             # Fetch existing card details to preserve other fields
-            card = kanban_manager.get_card_details(task_id)
+            card = kanban_manager.get_card_details(self.db_path, task_id)
             if card:
                 kanban_manager.update_card(
+                    self.db_path,
                     card_id=task_id,
                     new_title=card['title'],
                     new_description=card['description'],
@@ -48,8 +52,9 @@ class GanttBridge(QObject):
 
 
 class GanttChartWidget(QWidget):
-    def __init__(self):
+    def __init__(self, db_path):
         super().__init__()
+        self.db_path = db_path
         self.tasks = []
         self.init_ui()
         self.refresh_gantt()
@@ -63,7 +68,7 @@ class GanttChartWidget(QWidget):
         self.web_view.setPage(self.page)
         
         # --- Setup Bridge for JS -> Python communication ---
-        self.bridge = GanttBridge()
+        self.bridge = GanttBridge(self.db_path)
         self.channel = QWebChannel()
         self.channel.registerObject("ganttBridge", self.bridge)
         self.page.setWebChannel(self.channel)
@@ -87,7 +92,7 @@ class GanttChartWidget(QWidget):
         """
         print("--- Refreshing Gantt Chart ---")
         try:
-            all_cards = kanban_manager.get_all_cards()
+            all_cards = kanban_manager.get_all_cards(self.db_path)
             self.tasks = self._transform_cards_to_gantt_tasks(all_cards)
             html_content = self._generate_gantt_html()
             self.web_view.setHtml(html_content)
@@ -98,7 +103,7 @@ class GanttChartWidget(QWidget):
     def _transform_cards_to_gantt_tasks(self, cards):
         gantt_tasks = []
         
-        columns = kanban_manager.get_all_columns()
+        columns = kanban_manager.get_all_columns(self.db_path)
         column_map = {col['id']: col['name'] for col in columns}
         today = datetime.datetime.now()
 

@@ -2,9 +2,9 @@ from app.db.database import get_db_connection
 import datetime
 from app.utils import time_utils
 
-def create_checklist(name, kanban_card_id=None):
+def create_checklist(db_path, name, kanban_card_id=None):
     """Creates a new checklist."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     cursor.execute(
         "INSERT INTO checklists (name, kanban_card_id) VALUES (?, ?)",
@@ -16,6 +16,7 @@ def create_checklist(name, kanban_card_id=None):
     return new_id
 
 def _process_checklist_join_results(rows):
+    print(f"--- DB: _process_checklist_join_results received rows: {rows} ---")
     checklists = {}
     for row in rows:
         checklist_id = row['id']
@@ -38,11 +39,13 @@ def _process_checklist_join_results(rows):
                 'pre_notified_at': row['item_pre_notified_at']
             }
             checklists[checklist_id]['items'].append(item)
-    return list(checklists.values())
+    processed_list = list(checklists.values())
+    print(f"--- DB: _process_checklist_join_results returning: {processed_list} ---")
+    return processed_list
 
-def get_all_checklists():
+def get_all_checklists(db_path):
     """Retrieves all checklists with their items using a single JOIN query."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT 
@@ -56,9 +59,9 @@ def get_all_checklists():
     conn.close()
     return _process_checklist_join_results(rows)
 
-def get_checklist(checklist_id):
+def get_checklist(db_path, checklist_id):
     """Retrieves a single checklist with its items using a single JOIN query."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT 
@@ -72,28 +75,31 @@ def get_checklist(checklist_id):
     rows = cursor.fetchall()
     conn.close()
     if rows:
-        return _process_checklist_join_results(rows)[0]
+        processed_results = _process_checklist_join_results(rows)
+        print(f"--- DB: get_checklist processed results: {processed_results} ---")
+        return processed_results[0]
+    print("--- DB: get_checklist returned no rows ---")
     return None
 
-def update_checklist_name(checklist_id, new_name):
+def update_checklist_name(db_path, checklist_id, new_name):
     """Updates the name of a checklist."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     cursor.execute("UPDATE checklists SET name = ? WHERE id = ?", (new_name, checklist_id))
     conn.commit()
     conn.close()
 
-def delete_checklist(checklist_id):
+def delete_checklist(db_path, checklist_id):
     """Deletes a checklist and all its items."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM checklists WHERE id = ?", (checklist_id,))
     conn.commit()
     conn.close()
 
-def add_item_to_checklist(checklist_id, text, due_at=None):
+def add_item_to_checklist(db_path, checklist_id, text, due_at=None):
     """Adds a new item to a checklist."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     due_at_utc_str = time_utils.to_utc(due_at).isoformat() if isinstance(due_at, datetime.datetime) else due_at
     cursor.execute(
@@ -105,9 +111,9 @@ def add_item_to_checklist(checklist_id, text, due_at=None):
     conn.close()
     return new_id
 
-def update_checklist_item(item_id, text=None, is_checked=None, due_at=None, is_notified=None, pre_notified_at=None):
+def update_checklist_item(db_path, item_id, text=None, is_checked=None, due_at=None, is_notified=None, pre_notified_at=None):
     """Updates a checklist item's text, checked state, due date, or notification status."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     if text is not None:
         cursor.execute("UPDATE checklist_items SET text = ? WHERE id = ?", (text, item_id))
@@ -124,17 +130,17 @@ def update_checklist_item(item_id, text=None, is_checked=None, due_at=None, is_n
     conn.commit()
     conn.close()
 
-def delete_checklist_item(item_id):
+def delete_checklist_item(db_path, item_id):
     """Deletes a checklist item."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM checklist_items WHERE id = ?", (item_id,))
     conn.commit()
     conn.close()
 
-def get_actual_due_checklist_items():
+def get_actual_due_checklist_items(db_path):
     """Retrieves all due and not notified checklist items."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     now_utc = time_utils.to_utc(datetime.datetime.now()).isoformat()
     cursor.execute("SELECT id, text, checklist_id, due_at, pre_notified_at FROM checklist_items WHERE due_at <= ? AND is_checked = 0 AND is_notified = 0", (now_utc,))
@@ -148,9 +154,9 @@ def get_actual_due_checklist_items():
     conn.close()
     return items
 
-def get_pre_due_checklist_items(pre_notification_offset_minutes):
+def get_pre_due_checklist_items(db_path, pre_notification_offset_minutes):
     """Retrieves checklist items that are due within the pre-notification offset and have not been pre-notified."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     now = datetime.datetime.now()
     now_utc = time_utils.to_utc(now)
@@ -170,11 +176,20 @@ def get_pre_due_checklist_items(pre_notification_offset_minutes):
     conn.close()
     return items
 
+def get_checklist_item(db_path, item_id):
+    """Retrieves a single checklist item."""
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM checklist_items WHERE id = ?", (item_id,))
+    item = cursor.fetchone()
+    conn.close()
+    if item:
+        return dict(item)
+    return None
 
-
-def get_checklists_for_card(kanban_card_id):
+def get_checklists_for_card(db_path, kanban_card_id):
     """Retrieves all checklists for a given Kanban card with their items using a single JOIN query."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT 
@@ -189,9 +204,9 @@ def get_checklists_for_card(kanban_card_id):
     conn.close()
     return _process_checklist_join_results(rows)
 
-def get_independent_checklists():
+def get_independent_checklists(db_path):
     """Retrieves all checklists that are not associated with a Kanban card with their items using a single JOIN query."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT 
@@ -207,9 +222,9 @@ def get_independent_checklists():
     conn.close()
     return _process_checklist_join_results(rows)
 
-def get_items_due_between(start_date, end_date):
+def get_items_due_between(db_path, start_date, end_date):
     """Retrieves checklist items with a due date between the given dates."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     items = conn.execute("SELECT text, due_at FROM checklist_items WHERE due_at BETWEEN ? AND ?", (start_date, end_date)).fetchall()
     conn.close()
     return items

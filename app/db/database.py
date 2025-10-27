@@ -9,9 +9,7 @@ def get_app_data_dir():
     return app_data_dir
 
 # Define the path for the database in the app data directory
-DB_FILE = get_app_data_dir() / "infomensajero.db"
-
-def get_db_connection():
+def get_db_connection(db_path):
     """Creates a database connection."""
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
@@ -19,9 +17,9 @@ def get_db_connection():
     conn.execute("PRAGMA journal_mode=WAL;")
     return conn
 
-def create_schema():
+def create_schema(db_path):
     """Creates the database schema if it doesn't exist."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
 
     # Table for services
@@ -186,9 +184,7 @@ def create_schema():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS checklists (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        kanban_card_id INTEGER,
-        FOREIGN KEY (kanban_card_id) REFERENCES kanban_cards (id) ON DELETE SET NULL
+        name TEXT NOT NULL
     );
     """)
 
@@ -198,18 +194,9 @@ def create_schema():
         checklist_id INTEGER NOT NULL,
         text TEXT NOT NULL,
         is_checked INTEGER NOT NULL DEFAULT 0,
-        due_at TEXT,
-        is_notified INTEGER NOT NULL DEFAULT 0,
-        pre_notified_at TEXT,
         FOREIGN KEY (checklist_id) REFERENCES checklists (id) ON DELETE CASCADE
     );
     """)
-
-    # Add due_at column to checklist_items if it doesn't exist
-    cursor.execute("PRAGMA table_info(checklist_items);")
-    columns = [col[1] for col in cursor.fetchall()]
-    if 'pre_notified_at' not in columns:
-        cursor.execute("ALTER TABLE checklist_items ADD COLUMN pre_notified_at TEXT;")
 
     # Table for reminders
     cursor.execute("""

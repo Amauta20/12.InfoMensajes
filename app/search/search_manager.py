@@ -1,9 +1,9 @@
 import sqlite3
 from app.db.database import get_db_connection
 
-def rebuild_fts_indexes():
+def rebuild_fts_indexes(db_path):
     """Rebuilds the FTS indexes to ensure they are up to date with existing data."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
     try:
         cursor.execute("INSERT INTO notes_fts(notes_fts) VALUES('rebuild');")
@@ -15,9 +15,9 @@ def rebuild_fts_indexes():
     finally:
         pass # conn.close() is handled by the calling context or test fixture
 
-def search_all(query):
+def search_all(db_path, query):
     """Searches across notes and kanban cards using FTS5."""
-    conn = get_db_connection()
+    conn = get_db_connection(db_path)
     results = []
     
     # FTS query requires a specific format, add wildcards for prefix search
