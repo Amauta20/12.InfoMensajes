@@ -1,12 +1,13 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QColorDialog
 from PyQt6.QtGui import QColor, QPalette
 from PyQt6.QtCore import Qt
-from app.db import settings_manager
+from app.db.settings_manager import SettingsManager
 from zoneinfo import available_timezones
 
 class SettingsWidget(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, settings_manager_instance, parent=None):
+        super().__init__(parent)
+        self.settings_manager = settings_manager_instance
         self.layout = QVBoxLayout(self)
 
         self.form_layout = QFormLayout()
@@ -67,28 +68,28 @@ class SettingsWidget(QWidget):
         if color.isValid():
             button.setStyleSheet(f"background-color: {color.name()}")
             if setting_key == "todo_color":
-                settings_manager.set_todo_color(color.name())
+                self.settings_manager.set_todo_color(color.name())
             elif setting_key == "inprogress_color":
-                settings_manager.set_inprogress_color(color.name())
+                self.inprogress_manager.set_inprogress_color(color.name())
             elif setting_key == "done_color":
-                settings_manager.set_done_color(color.name())
+                self.settings_manager.set_done_color(color.name())
 
     def save_settings(self):
-        settings_manager.set_timezone(self.timezone_combo.currentText())
-        settings_manager.set_datetime_format(self.datetime_format_combo.currentText())
-        settings_manager.set_pre_notification_offset(self.pre_notification_offset_spin.value())
+        self.settings_manager.set_timezone(self.timezone_combo.currentText())
+        self.settings_manager.set_datetime_format(self.datetime_format_combo.currentText())
+        self.settings_manager.set_pre_notification_offset(self.pre_notification_offset_spin.value())
         QMessageBox.information(self, "Configuración Guardada", "La configuración se ha guardado correctamente.")
 
     def refresh_settings(self):
-        self.timezone_combo.setCurrentText(settings_manager.get_timezone())
-        self.datetime_format_combo.setCurrentText(settings_manager.get_datetime_format())
-        self.pre_notification_offset_spin.setValue(settings_manager.get_pre_notification_offset())
+        self.timezone_combo.setCurrentText(self.settings_manager.get_timezone())
+        self.datetime_format_combo.setCurrentText(self.settings_manager.get_datetime_format())
+        self.pre_notification_offset_spin.setValue(self.settings_manager.get_pre_notification_offset())
 
-        todo_color = settings_manager.get_todo_color()
+        todo_color = self.settings_manager.get_todo_color()
         self.todo_color_button.setStyleSheet(f"background-color: {todo_color}")
 
-        inprogress_color = settings_manager.get_inprogress_color()
+        inprogress_color = self.settings_manager.get_inprogress_color()
         self.inprogress_color_button.setStyleSheet(f"background-color: {inprogress_color}")
 
-        done_color = settings_manager.get_done_color()
+        done_color = self.settings_manager.get_done_color()
         self.done_color_button.setStyleSheet(f"background-color: {done_color}")

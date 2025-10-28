@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QDialog, QMenu
 from PyQt6.QtCore import pyqtSignal as Signal, Qt
 from PyQt6.QtGui import QIcon, QAction
-from app.services import service_manager
+from app.services.service_manager import ServiceManager # Changed import
 from app.ui.add_service_dialog import AddServiceDialog
 from app.ui.edit_service_name_dialog import EditServiceNameDialog
 from app.ui.select_service_dialog import SelectServiceDialog
@@ -17,8 +17,9 @@ class Sidebar(QWidget):
     show_rss_reader_requested = Signal() # New signal to show RssReaderWidget
     show_vault_requested = Signal()
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, service_manager_instance, parent=None):
+        super().__init__(parent)
+        self.service_manager = service_manager_instance # Store instance
         self._unread_statuses = {} # {service_id: True/False}
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(5, 5, 5, 5)
@@ -80,7 +81,7 @@ class Sidebar(QWidget):
         dialog.exec()
 
     def _add_catalog_service(self, name, url, icon):
-        service_manager.add_service(name, url, icon)
+        self.service_manager.add_service(name, url, icon)
         self.load_services() # Refresh the service list
 
     def _add_custom_service(self):
@@ -88,7 +89,7 @@ class Sidebar(QWidget):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             name, url, icon = dialog.get_service_data()
             if name and url:
-                service_manager.add_service(name, url, icon)
+                self.service_manager.add_service(name, url, icon)
                 self.load_services() # Refresh the service list
 
     def load_services(self):
@@ -98,7 +99,7 @@ class Sidebar(QWidget):
             if child.widget():
                 child.widget().deleteLater()
 
-        services = service_manager.get_user_services()
+        services = self.service_manager.get_user_services()
 
         self._unread_statuses = {s['id']: self._unread_statuses.get(s['id'], False) for s in services} # Preserve existing unread statuses
 
@@ -138,7 +139,7 @@ class Sidebar(QWidget):
         menu.exec(button.mapToGlobal(pos))
 
     def add_another_instance_from_ui(self, service_id):
-        service_details = service_manager.get_service_by_id(service_id)
+        service_details = self.service_manager.get_service_by_id(service_id)
         if not service_details: return
 
         suggested_name = f"{service_details['name']} (Nueva Instancia)"
@@ -146,22 +147,22 @@ class Sidebar(QWidget):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             name, url, icon = dialog.get_service_data()
             if name and url:
-                service_manager.add_service(name, url, icon)
+                self.service_manager.add_service(name, url, icon)
                 self.load_services() # Refresh the service list
 
     def edit_service_name_from_ui(self, service_id):
-        service_details = service_manager.get_service_by_id(service_id)
+        service_details = self.service_manager.get_service_by_id(service_id)
         if not service_details: return
 
         dialog = EditServiceNameDialog(service_details['name'], self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             new_name = dialog.get_new_name()
             if new_name and new_name != service_details['name']:
-                service_manager.update_service_name(service_id, new_name)
+                self.service_manager.update_service_name(service_id, new_name)
                 self.load_services() # Refresh the service list
 
     def delete_service_from_ui(self, service_id):
-        service_manager.delete_service(service_id)
+        self.service_manager.delete_service(service_id)
         self.load_services() # Refresh the service list
         self.service_deleted.emit(service_id) # Notify MainWindow to remove webview
 

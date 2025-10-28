@@ -1,12 +1,13 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QDialogButtonBox, QColorDialog
 from PyQt6.QtGui import QColor
 from PyQt6.QtCore import Qt
-from app.db import settings_manager
+from app.db.settings_manager import SettingsManager
 from zoneinfo import available_timezones
 
 class UnifiedSettingsDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, settings_manager_instance, parent=None):
         super().__init__(parent)
+        self.settings_manager = settings_manager_instance
         self.setWindowTitle("Configuración General")
         self.layout = QVBoxLayout(self)
 
@@ -85,20 +86,20 @@ class UnifiedSettingsDialog(QDialog):
         self.load_settings()
 
     def load_settings(self):
-        self.timezone_combo.setCurrentText(settings_manager.get_timezone())
-        self.datetime_format_combo.setCurrentText(settings_manager.get_datetime_format())
-        self.pre_notification_offset_spin.setValue(settings_manager.get_pre_notification_offset())
-        self.pomodoro_spinbox.setValue(settings_manager.get_pomodoro_duration())
-        self.short_break_spinbox.setValue(settings_manager.get_short_break_duration())
-        self.long_break_spinbox.setValue(settings_manager.get_long_break_duration())
+        self.timezone_combo.setCurrentText(self.settings_manager.get_timezone())
+        self.datetime_format_combo.setCurrentText(self.settings_manager.get_datetime_format())
+        self.pre_notification_offset_spin.setValue(self.settings_manager.get_pre_notification_offset())
+        self.pomodoro_spinbox.setValue(self.settings_manager.get_pomodoro_duration())
+        self.short_break_spinbox.setValue(self.settings_manager.get_short_break_duration())
+        self.long_break_spinbox.setValue(self.settings_manager.get_long_break_duration())
 
-        self.todo_color = settings_manager.get_todo_color()
+        self.todo_color = self.settings_manager.get_todo_color()
         self.todo_color_button.setStyleSheet(f"background-color: {self.todo_color}")
 
-        self.inprogress_color = settings_manager.get_inprogress_color()
+        self.inprogress_color = self.settings_manager.get_inprogress_color()
         self.inprogress_color_button.setStyleSheet(f"background-color: {self.inprogress_color}")
 
-        self.done_color = settings_manager.get_done_color()
+        self.done_color = self.settings_manager.get_done_color()
         self.done_color_button.setStyleSheet(f"background-color: {self.done_color}")
 
     def select_color(self, button, setting_key):
@@ -113,18 +114,18 @@ class UnifiedSettingsDialog(QDialog):
                 self.done_color = color.name()
 
     def save_settings(self):
-        settings_manager.set_timezone(self.timezone_combo.currentText())
-        settings_manager.set_datetime_format(self.datetime_format_combo.currentText())
-        settings_manager.set_pre_notification_offset(self.pre_notification_offset_spin.value())
-        settings_manager.set_pomodoro_duration(self.pomodoro_spinbox.value())
-        settings_manager.set_short_break_duration(self.short_break_spinbox.value())
-        settings_manager.set_long_break_duration(self.long_break_spinbox.value())
+        self.settings_manager.set_timezone(self.timezone_combo.currentText())
+        self.settings_manager.set_datetime_format(self.datetime_format_combo.currentText())
+        self.settings_manager.set_pre_notification_offset(self.pre_notification_offset_spin.value())
+        self.settings_manager.set_pomodoro_duration(self.pomodoro_spinbox.value())
+        self.settings_manager.set_short_break_duration(self.short_break_spinbox.value())
+        self.settings_manager.set_long_break_duration(self.long_break_spinbox.value())
 
         if self.todo_color:
-            settings_manager.set_todo_color(self.todo_color)
+            self.settings_manager.set_todo_color(self.todo_color)
         if self.inprogress_color:
-            settings_manager.set_inprogress_color(self.inprogress_color)
+            self.settings_manager.set_inprogress_color(self.inprogress_color)
         if self.done_color:
-            settings_manager.set_done_color(self.done_color)
+            self.settings_manager.set_done_color(self.done_color)
 
         self.accept()

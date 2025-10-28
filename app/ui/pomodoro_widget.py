@@ -1,12 +1,13 @@
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 from PyQt6.QtCore import QTimer, QTime, pyqtSignal as Signal
-from app.db import settings_manager
+from app.db.settings_manager import SettingsManager
 
 class PomodoroWidget(QWidget):
     pomodoro_finished = Signal(str)
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, settings_manager_instance, parent=None):
+        super().__init__(parent)
+        self.settings_manager = settings_manager_instance # Store instance
         self.load_settings()
 
         self.current_mode = "Pomodoro"
@@ -46,9 +47,9 @@ class PomodoroWidget(QWidget):
 
     def load_settings(self):
         self.modes = {
-            "Pomodoro": settings_manager.get_pomodoro_duration(),
-            "Descanso Corto": settings_manager.get_short_break_duration(),
-            "Descanso Largo": settings_manager.get_long_break_duration(),
+            "Pomodoro": self.settings_manager.get_pomodoro_duration(),
+            "Descanso Corto": self.settings_manager.get_short_break_duration(),
+            "Descanso Largo": self.settings_manager.get_long_break_duration(),
         }
 
     def start_timer(self):

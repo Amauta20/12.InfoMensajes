@@ -8,12 +8,20 @@ from PyQt6.QtCore import QObject, pyqtSlot
 import os
 
 from app.ui.sidebar import Sidebar
-from app.search import search_manager
-from app.db import reminders_manager, checklist_manager, settings_manager, kanban_manager
+from app.db.reminders_manager import RemindersManager
+from app.db.checklist_manager import ChecklistManager
+from app.db.settings_manager import SettingsManager
+from app.db.kanban_manager import KanbanManager
+from app.db.notes_manager import NotesManager
+from app.db.rss_manager import RssManager
+from app.db import database # For get_db_connection if needed, but conn is passed
+from app.search.search_manager import SearchManager # Import the class
+from app.services.service_manager import ServiceManager # Import the class
+from app.security.vault_manager import VaultManager # Import the class
+
 from app.utils import time_utils
 from app.ui.search_results_widget import SearchResultsWidget
 from app.ui.styles import dark_theme_stylesheet, light_theme_stylesheet
-from app.services import service_manager
 from app.ui.welcome_widget import WelcomeWidget
 from app.ui.add_service_dialog import AddServiceDialog # Needed for opening dialog from welcome widget
 from app.ui.notes_widget import NotesWidget
@@ -135,10 +143,22 @@ class CustomWebEngineView(QWebEngineView):
             menu.exec(pos)
 
 class MainWindow(QMainWindow):
-    def __init__(self, db_path, metrics_manager_instance):
+    def __init__(self, conn, metrics_manager_instance):
         super().__init__()
+        self.conn = conn # Store the connection
         self.metrics_manager = metrics_manager_instance
-        self.db_path = db_path
+
+        # Instantiate all managers
+        self.reminders_manager = RemindersManager(self.conn)
+        self.checklist_manager_instance = ChecklistManager(self.conn)
+        self.kanban_manager_instance = KanbanManager(self.conn)
+        self.notes_manager_instance = NotesManager(self.conn)
+        self.rss_manager_instance = RssManager(self.conn)
+        self.settings_manager_instance = SettingsManager(self.conn)
+        self.search_manager_instance = SearchManager(self.conn)
+        self.service_manager_instance = ServiceManager(self.conn)
+        self.vault_manager_instance = VaultManager() # Singleton
+        self.vault_manager_instance.set_conn(self.conn) # Set connection for vault_manager
 
         # Dictionary to store service-specific JavaScript for unread message detection
         self._service_unread_js_scripts = {
@@ -188,7 +208,7 @@ class MainWindow(QMainWindow):
 
         self.toolbar.addSeparator()
 
-        self.pomodoro_widget = PomodoroWidget()
+        self.pomodoro_widget = PomodoroWidget(self.settings_manager_instance)
         self.toolbar.addWidget(self.pomodoro_widget)
 
         self.general_settings_button = QPushButton("Configuración General")
@@ -204,7 +224,7 @@ class MainWindow(QMainWindow):
         self.web_views = {} # Cache for web views: {profile_path: QWebEngineView}
 
         # Search Results Widget
-        self.search_results_widget = SearchResultsWidget()
+        self.search_results_widget = SearchResultsWidget(self.search_manager_instance)
         self.web_view_stack.addWidget(self.search_results_widget) # Add it to the stack, but not visible initially
 
         # Welcome Widget
@@ -213,31 +233,31 @@ class MainWindow(QMainWindow):
         self.web_view_stack.addWidget(self.welcome_widget)
 
         # Notes Widget
-        self.notes_widget = NotesWidget(self.db_path)
+        self.notes_widget = NotesWidget()
         self.web_view_stack.addWidget(self.notes_widget)
 
         # Kanban Widget
-        self.kanban_widget = KanbanWidget(self.db_path)
+        self.kanban_widget = KanbanWidget()
         self.web_view_stack.addWidget(self.kanban_widget)
 
         # Gantt Chart Widget
-        self.gantt_chart_widget = GanttChartWidget(self.db_path)
+        self.gantt_chart_widget = GanttChartWidget()
         self.web_view_stack.addWidget(self.gantt_chart_widget)
 
         # Checklist Widget
-        self.checklist_widget = ChecklistWidget(self.db_path)
+        self.checklist_widget = ChecklistWidget()
         self.web_view_stack.addWidget(self.checklist_widget)
 
         # Reminders Widget
-        self.reminders_widget = RemindersWidget(self.db_path)
+        self.reminders_widget = RemindersWidget()
         self.web_view_stack.addWidget(self.reminders_widget)
 
         # RSS Reader Widget
-        self.rss_reader_widget = RssReaderWidget(self.db_path)
+        self.rss_reader_widget = RssReaderWidget()
         self.web_view_stack.addWidget(self.rss_reader_widget)
 
         # Vault Widget
-        self.vault_widget = VaultWidget(self.db_path)
+        self.vault_widget = VaultWidget()
         self.web_view_stack.addWidget(self.vault_widget)
 
         # Sidebar
@@ -326,31 +346,31 @@ class MainWindow(QMainWindow):
 
     def check_for_notifications(self):
         # Get pre-notification offset
-        pre_notification_offset_minutes = settings_manager.get_pre_notification_offset()
+        pre_notification_offset_minutes = self.settings_manager_instance.get_pre_notification_offset()
 
         # Check for pre-due reminders
-        pre_due_reminders = reminders_manager.get_pre_due_reminders(self.db_path, pre_notification_offset_minutes)
+        pre_due_reminders = self.reminders_manager.get_pre_due_reminders(pre_notification_offset_minutes)
         for reminder in pre_due_reminders:
             self.show_notification("Recordatorio Próximo", f"'{reminder['text']}' vence pronto ({reminder['due_at']})")
-            reminders_manager.update_reminder(self.db_path, reminder['id'], pre_notified_at=time_utils.to_utc(time_utils.datetime_from_qdatetime(time_utils.get_current_qdatetime())).isoformat())
+            self.reminders_manager.update_reminder(reminder['id'], pre_notified_at=time_utils.to_utc(time_utils.datetime_from_qdatetime(time_utils.get_current_qdatetime())).isoformat())
 
         # Check for pre-due checklist items
-        pre_due_checklist_items = checklist_manager.get_pre_due_checklist_items(self.db_path, pre_notification_offset_minutes)
+        pre_due_checklist_items = self.checklist_manager_instance.get_pre_due_checklist_items(pre_notification_offset_minutes)
         for item in pre_due_checklist_items:
             self.show_notification("Tarea de Checklist Próxima", f"'{item['text']}' vence pronto ({item['due_at']})")
-            checklist_manager.update_checklist_item(self.db_path, item['id'], pre_notified_at=time_utils.to_utc(time_utils.datetime_from_qdatetime(time_utils.get_current_qdatetime())).isoformat())
+            self.checklist_manager_instance.update_checklist_item(item['id'], pre_notified_at=time_utils.to_utc(time_utils.datetime_from_qdatetime(time_utils.get_current_qdatetime())).isoformat())
 
         # Check for due reminders
-        due_reminders = reminders_manager.get_actual_due_reminders(self.db_path)
+        due_reminders = self.reminders_manager.get_actual_due_reminders()
         for reminder in due_reminders:
             self.show_notification("Recordatorio", reminder['text'])
-            reminders_manager.update_reminder(self.db_path, reminder['id'], is_notified=1)
+            self.reminders_manager.update_reminder(reminder['id'], is_notified=1)
 
         # Check for due checklist items
-        due_checklist_items = checklist_manager.get_actual_due_checklist_items(self.db_path)
+        due_checklist_items = self.checklist_manager_instance.get_actual_due_checklist_items()
         for item in due_checklist_items:
             self.show_notification("Tarea de Checklist", item['text'])
-            checklist_manager.update_checklist_item(item['id'], is_notified=1)
+            self.checklist_manager_instance.update_checklist_item(item['id'], is_notified=1)
 
     def show_pomodoro_notification(self, mode):
         if mode == "Pomodoro":
@@ -362,7 +382,7 @@ class MainWindow(QMainWindow):
         self.show_notification(title, message)
 
     def open_unified_settings_dialog(self):
-        dialog = UnifiedSettingsDialog(self)
+        dialog = UnifiedSettingsDialog(self.settings_manager_instance, self) # Pass settings manager
         if dialog.exec():
             # Reload settings that might affect UI or timers
             self.pomodoro_widget.load_settings()
@@ -410,7 +430,7 @@ class MainWindow(QMainWindow):
             # This is a simplified approach; a more robust one would map profile_path back to service name
             for profile_path, view in self.web_views.items():
                 if view == current_widget:
-                    service_details = service_manager.get_service_by_profile_path(profile_path)
+                    service_details = self.service_manager_instance.get_service_by_profile_path(profile_path)
                     if service_details: service_name = service_details['name']
                     break
         elif hasattr(current_widget, '__class__'):
@@ -436,7 +456,7 @@ class MainWindow(QMainWindow):
         self.sidebar.open_select_service_dialog()
 
     def add_service_from_welcome(self, name, url, icon):
-        service_manager.add_service(name, url, icon)
+        self.service_manager_instance.add_service(name, url, icon)
         self.sidebar.load_services()
         self.load_initial_page()
 
@@ -449,7 +469,7 @@ class MainWindow(QMainWindow):
         if not query:
             return
 
-        results = search_manager.search_all(query)
+        results = self.search_manager_instance.search_all(query)
         self.search_results_widget.display_results(results, query)
         self.web_view_stack.setCurrentWidget(self.search_results_widget)
         self.track_current_widget_usage()
@@ -469,7 +489,7 @@ class MainWindow(QMainWindow):
         """
         Loads a service in its own profile and view, creating it if it doesn't exist.
         """
-        service_details = service_manager.get_service_by_profile_path(profile_path)
+        service_details = self.service_manager_instance.get_service_by_profile_path(profile_path)
         if not service_details: # Handle case where service_details might not be found
             print(f"Error: Service details not found for profile_path: {profile_path}")
             return
@@ -498,25 +518,11 @@ class MainWindow(QMainWindow):
         self.web_view_stack.setCurrentWidget(view)
         self.track_current_widget_usage() # Track usage for web views
 
+
+    
     def remove_webview_for_service(self, service_id):
         # Find the profile_path associated with the service_id
-        service_details = service_manager.get_service_by_id(service_id)
-        if not service_details: return
-
-        profile_path = service_details['profile_path']
-
-        if profile_path in self.web_views:
-            view_to_remove = self.web_views.pop(profile_path) # Remove from cache
-            self.web_view_stack.removeWidget(view_to_remove) # Remove from stack
-            view_to_remove.deleteLater() # Schedule for deletion
-
-            # If the removed view was the current one, switch to a default view
-            if self.web_view_stack.currentWidget() == view_to_remove:
-                self.load_initial_page() # Reload initial page (welcome or first service)
-
-    def remove_webview_for_service(self, service_id):
-        # Find the profile_path associated with the service_id
-        service_details = service_manager.get_service_by_id(service_id)
+        service_details = self.service_manager_instance.get_service_by_id(service_id)
         if not service_details: return
 
         profile_path = service_details['profile_path']
@@ -541,7 +547,7 @@ class MainWindow(QMainWindow):
             self._check_unread_messages_for_service(service_id, view)
 
     def _check_unread_messages_for_service(self, service_id, view):
-        service_details = service_manager.get_service_by_id(service_id)
+        service_details = self.service_manager_instance.get_service_by_id(service_id)
         if not service_details: return
 
         service_name = service_details['name']
@@ -571,7 +577,7 @@ class MainWindow(QMainWindow):
         """
         Loads the first service in the list or a default welcome page.
         """
-        services = service_manager.get_all_services()
+        services = self.service_manager_instance.get_all_services()
         if services:
             first_service = services[0]
             self.load_service(first_service['url'], first_service['profile_path'])

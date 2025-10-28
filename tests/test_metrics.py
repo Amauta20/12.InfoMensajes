@@ -24,8 +24,6 @@ def test_db(monkeypatch):
     
     # Patch the get_db_connection in all modules that use it
     monkeypatch.setattr('app.db.database.get_db_connection', lambda: conn)
-    monkeypatch.setattr('app.db.notes_manager.get_db_connection', lambda: conn)
-    monkeypatch.setattr('app.db.kanban_manager.get_db_connection', lambda: conn)
     monkeypatch.setattr('app.search.search_manager.get_db_connection', lambda: conn)
     monkeypatch.setattr('app.services.service_manager.get_db_connection', lambda: conn)
     monkeypatch.setattr('app.metrics.metrics_manager.get_db_connection', lambda: conn)

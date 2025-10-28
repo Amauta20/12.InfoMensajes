@@ -1,11 +1,12 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QTextEdit, QPushButton, QLabel, QMessageBox, QDateEdit, QTimeEdit
 from PyQt6.QtCore import Qt, QDateTime
 from app.utils import time_utils
-from app.db import settings_manager
+from app.db.settings_manager import SettingsManager
 
 class AddKanbanCardDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, settings_manager_instance, parent=None):
         super().__init__(parent)
+        self.settings_manager = settings_manager_instance
         self.setWindowTitle("Añadir Tarjeta Kanban")
         self.setModal(True)
         self.setFixedSize(400, 450)
@@ -40,12 +41,12 @@ class AddKanbanCardDialog(QDialog):
         datetime_layout = QHBoxLayout()
         self.date_input = QDateEdit()
         self.date_input.setCalendarPopup(True)
-        self.date_input.setDisplayFormat(time_utils.convert_strftime_to_qt_format(settings_manager.get_date_format()))
+        self.date_input.setDisplayFormat(time_utils.convert_strftime_to_qt_format(self.settings_manager.get_date_format()))
         self.date_input.setDateTime(time_utils.get_current_qdatetime())
         datetime_layout.addWidget(self.date_input)
 
         self.time_input = QTimeEdit()
-        self.time_input.setDisplayFormat(time_utils.convert_strftime_to_qt_format(settings_manager.get_time_format()))
+        self.time_input.setDisplayFormat(time_utils.convert_strftime_to_qt_format(self.settings_manager.get_time_format()))
         self.time_input.setDateTime(time_utils.get_current_qdatetime())
         datetime_layout.addWidget(self.time_input)
         self.layout.addLayout(datetime_layout)

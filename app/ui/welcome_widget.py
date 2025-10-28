@@ -3,7 +3,8 @@ from PyQt6.QtCore import Qt, pyqtSignal as Signal
 from PyQt6.QtGui import QIcon
 import datetime
 from app.services import service_manager
-from app.db import kanban_manager, checklist_manager, reminders_manager
+from app.db.kanban_manager import KanbanManager
+from app.db import checklist_manager, reminders_manager, database
 from app.utils import time_utils
 
 class WelcomeWidget(QWidget):
@@ -14,6 +15,8 @@ class WelcomeWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.conn = database.get_db_connection()
+        self.kanban_manager = KanbanManager(self.conn)
         self.layout = QVBoxLayout(self)
         self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.layout.setSpacing(20)
@@ -75,7 +78,7 @@ class WelcomeWidget(QWidget):
         tasks = []
 
         # Kanban cards
-        kanban_cards = kanban_manager.get_cards_due_between(start_of_week, end_of_week)
+        kanban_cards = self.kanban_manager.get_cards_due_between(start_of_week, end_of_week)
         for card in kanban_cards:
             tasks.append({
                 "type": "Kanban",

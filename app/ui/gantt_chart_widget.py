@@ -6,13 +6,13 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtCore import QObject, pyqtSlot
 from PyQt6.QtWebChannel import QWebChannel
 
-from app.db import kanban_manager
-from app.db import settings_manager
+from app.db.kanban_manager import KanbanManager
+from app.db import settings_manager, database
 
 class GanttBridge(QObject):
-    def __init__(self, db_path, parent=None):
+    def __init__(self, manager, parent=None):
         super().__init__(parent)
-        self.db_path = db_path
+        self.manager = manager
     """
     Bridge object to allow communication from JavaScript (in QWebEngineView)
     to Python.
@@ -31,10 +31,9 @@ class GanttBridge(QObject):
             end_date_obj = datetime.datetime.strptime(end_date, "%Y-%m-%d %H:%M")
 
             # Fetch existing card details to preserve other fields
-            card = kanban_manager.get_card_details(self.db_path, task_id)
+            card = self.manager.get_card_details(task_id)
             if card:
-                kanban_manager.update_card(
-                    self.db_path,
+                self.manager.update_card(
                     card_id=task_id,
                     new_title=card['title'],
                     new_description=card['description'],
@@ -52,9 +51,10 @@ class GanttBridge(QObject):
 
 
 class GanttChartWidget(QWidget):
-    def __init__(self, db_path):
-        super().__init__()
-        self.db_path = db_path
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.conn = database.get_db_connection()
+        self.kanban_manager = KanbanManager(self.conn)
         self.tasks = []
         self.init_ui()
         self.refresh_gantt()
@@ -68,7 +68,7 @@ class GanttChartWidget(QWidget):
         self.web_view.setPage(self.page)
         
         # --- Setup Bridge for JS -> Python communication ---
-        self.bridge = GanttBridge(self.db_path)
+        self.bridge = GanttBridge(self.kanban_manager)
         self.channel = QWebChannel()
         self.channel.registerObject("ganttBridge", self.bridge)
         self.page.setWebChannel(self.channel)
@@ -92,7 +92,7 @@ class GanttChartWidget(QWidget):
         """
         print("--- Refreshing Gantt Chart ---")
         try:
-            all_cards = kanban_manager.get_all_cards(self.db_path)
+            all_cards = self.kanban_manager.get_all_cards()
             self.tasks = self._transform_cards_to_gantt_tasks(all_cards)
             html_content = self._generate_gantt_html()
             self.web_view.setHtml(html_content)
@@ -103,7 +103,7 @@ class GanttChartWidget(QWidget):
     def _transform_cards_to_gantt_tasks(self, cards):
         gantt_tasks = []
         
-        columns = kanban_manager.get_all_columns(self.db_path)
+        columns = self.kanban_manager.get_all_columns()
         column_map = {col['id']: col['name'] for col in columns}
         today = datetime.datetime.now()
 
@@ -160,8 +160,6 @@ class GanttChartWidget(QWidget):
                         task_details["progress"] = round(progress, 2)
                     else:
                         task_details["progress"] = 0
-                else:
-                    task_details["progress"] = 0
 
             gantt_tasks.append(task_details)
         return gantt_tasks

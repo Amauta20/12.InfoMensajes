@@ -5,10 +5,11 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QStandardPaths
 from app.ui.main_window import MainWindow
-from app.db.database import create_schema
-from app.search.search_manager import rebuild_fts_indexes
+from app.db.database import create_schema, get_db_connection
+from app.search.search_manager import SearchManager
 from app.metrics.metrics_manager import MetricsManager
-from app.db import notes_manager, kanban_manager
+from app.db.notes_manager import NotesManager
+from app.db.kanban_manager import KanbanManager
 from app.security.vault_manager import vault_manager
 import datetime
 from app.security.vault import Vault
@@ -21,11 +22,8 @@ os.environ["QTWEBENGINE_CHROMIUM_ARGUMENTS"] = "--use-angle=d3d11"
 os.environ["QT_OPENGL"] = "software"
 
 def main():
-    # Ensure the database schema is created on startup
-    rebuild_fts_indexes()
-
     # Initialize metrics manager after schema is created
-    global_metrics_manager = MetricsManager.get_instance()
+    global_metrics_manager = MetricsManager.get_instance(conn)
 
     # Determine database path dynamically
     if getattr(sys, 'frozen', False):
@@ -39,23 +37,35 @@ def main():
         db_path = os.path.join(db_dir, "infomensajes.db")
     else:
         # Running in development mode
-        db_path = os.path.join(os.getcwd(), "app", "db", "infomensajes.db")
+        db_path = os.path.join(os.getcwd(), "database.db") # Use the project root for dev DB
 
     print(f"Checking for database at: {db_path}")
+
+    # Create a single connection here
+    conn = get_db_connection(db_path)
+
+    # Ensure the database schema is created on startup
     if not os.path.exists(db_path):
         print("Database file NOT found. Creating new schema.")
-        create_schema(db_path)
+        create_schema(conn) # Pass conn
     else:
-        rebuild_fts_indexes(db_path)
+        # If DB exists, ensure schema is up-to-date (create_schema handles IF NOT EXISTS)
+        create_schema(conn)
 
-    # Set db_path for vault_manager
-    vault_manager.set_db_path(db_path)
+    # Instantiate SearchManager
+    search_manager_instance = SearchManager(conn)
+    search_manager_instance.rebuild_fts_indexes() # Rebuild FTS indexes after schema is ensured
+
+    # Set connection for vault_manager
+    vault_manager.set_conn(conn) # This will require refactoring vault_manager
 
     app = QApplication(sys.argv)
     app.setStyleSheet(dark_theme_stylesheet)
-    window = MainWindow(db_path, global_metrics_manager)
+    window = MainWindow(conn, global_metrics_manager) # Pass conn
     window.show()
-    sys.exit(app.exec())
+    exit_code = app.exec()
+    conn.close() # Close connection when app exits
+    sys.exit(exit_code)
 
 if __name__ == "__main__":
     main()

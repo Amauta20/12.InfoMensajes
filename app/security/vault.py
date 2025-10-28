@@ -6,7 +6,7 @@ from cryptography.exceptions import InvalidTag
 import os
 import base64
 
-from app.db.database import get_db_connection
+# from app.db.database import get_db_connection # No longer needed directly by methods
 
 # Scrypt parameters as per blueprint
 SCRYPT_N = 2**15
@@ -15,8 +15,8 @@ SCRYPT_P = 1
 KEY_LENGTH = 32 # AES-256
 
 class Vault:
-    def __init__(self, db_path):
-        self.db_path = db_path
+    def __init__(self, conn):
+        self.conn = conn
 
     def _derive_key(self, passphrase: str, salt: bytes) -> bytes:
         kdf = Scrypt(
@@ -44,22 +44,18 @@ class Vault:
         nonce_b64 = base64.b64encode(nonce).decode('utf-8')
         salt_b64 = base64.b64encode(salt).decode('utf-8')
 
-        conn = get_db_connection(self.db_path)
-        cursor = conn.cursor()
+        cursor = self.conn.cursor()
         cursor.execute(
             "INSERT OR REPLACE INTO credentials (id, enc_blob, nonce, salt) VALUES (?, ?, ?, ?)",
             (secret_id, enc_blob, nonce_b64, salt_b64)
         )
-        conn.commit()
-        conn.close()
+        self.conn.commit()
 
     def get_secret(self, secret_id: str, passphrase: str) -> str | None:
         """Retrieves and decrypts a secret from the database."""
-        conn = get_db_connection(self.db_path)
-        cursor = conn.cursor()
+        cursor = self.conn.cursor()
         cursor.execute("SELECT enc_blob, nonce, salt FROM credentials WHERE id = ?", (secret_id,))
         row = cursor.fetchone()
-        conn.close()
 
         if not row:
             return None # Secret not found
@@ -90,17 +86,13 @@ class Vault:
 
     def get_all_secret_ids(self) -> list[str]:
         """Retrieves all secret IDs from the database, excluding internal ones."""
-        conn = get_db_connection(self.db_path)
-        cursor = conn.cursor()
+        cursor = self.conn.cursor()
         cursor.execute("SELECT id FROM credentials WHERE id != '_vault_test_' ORDER BY id")
         rows = cursor.fetchall()
-        conn.close()
         return [row['id'] for row in rows]
 
     def delete_secret(self, secret_id: str):
         """Deletes a secret from the database."""
-        conn = get_db_connection(self.db_path)
-        cursor = conn.cursor()
+        cursor = self.conn.cursor()
         cursor.execute("DELETE FROM credentials WHERE id = ?", (secret_id,))
-        conn.commit()
-        conn.close()
+        self.conn.commit()

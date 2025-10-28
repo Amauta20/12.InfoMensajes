@@ -1,12 +1,14 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QListWidget, QLabel, QListWidgetItem
 from PyQt6.QtCore import Qt, pyqtSignal
 import re
+from app.search.search_manager import SearchManager # Added import
 
 class SearchResultsWidget(QWidget):
     result_clicked = pyqtSignal(dict)
 
-    def __init__(self, parent=None):
+    def __init__(self, search_manager_instance, parent=None):
         super().__init__(parent)
+        self.search_manager = search_manager_instance # Store instance
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(10, 10, 10, 10)
         self.layout.setSpacing(5)

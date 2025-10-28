@@ -1,4 +1,3 @@
-
 from cryptography.exceptions import InvalidTag
 
 from app.security.vault import Vault
@@ -6,17 +5,18 @@ from app.security.vault import Vault
 class VaultManager:
     _instance = None
     _master_passphrase = None
-
+    _conn = None # Add a place to store the connection
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(VaultManager, cls).__new__(cls)
-            cls._instance._vault = Vault(None) # Initialize with None, to be set later
+            # Initialize Vault with None for conn, to be set later
+            cls._instance._vault = Vault(None)
         return cls._instance
 
-    def set_db_path(self, db_path):
-        self._db_path = db_path
-        self._vault = Vault(db_path)
+    def set_conn(self, conn):
+        self._conn = conn
+        self._vault = Vault(self._conn) # Pass the connection to Vault
 
     def is_locked(self) -> bool:
         """Check if the vault is currently locked (i.e., no master passphrase set)."""

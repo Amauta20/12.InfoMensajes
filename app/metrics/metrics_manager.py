@@ -1,20 +1,23 @@
-
 import datetime
-from app.db.database import get_db_connection
-from app.services import service_manager
+# from app.db.database import get_db_connection # No longer needed directly
+from app.services.service_manager import ServiceManager # Import the class
 
 class MetricsManager:
     _master_instance = None # Use a different name to avoid confusion with _instance
 
-    def __init__(self):
+    def __init__(self, conn):
+        self.conn = conn
+        self.service_manager = ServiceManager(self.conn) # Instantiate ServiceManager
         self.active_service_id = None
         self.session_start_time = None
         self._ensure_internal_services_exist()
 
     @classmethod
-    def get_instance(cls):
+    def get_instance(cls, conn=None):
         if cls._master_instance is None:
-            cls._master_instance = cls()
+            if conn is None:
+                raise ValueError("Connection must be provided on first call to MetricsManager.get_instance()")
+            cls._master_instance = cls(conn) # Pass conn to constructor
         return cls._master_instance
 
     def _ensure_internal_services_exist(self):
@@ -32,14 +35,14 @@ class MetricsManager:
             ("Bienvenida", "internal://welcome", "welcome_icon.png"),
         ]
         for name, url, icon in internal_tools:
-            if not service_manager.get_service_by_name(name):
-                service_manager.add_service(name, url, icon, is_internal=True)
+            if not self.service_manager.get_service_by_name(name):
+                self.service_manager.add_service(name, url, icon, is_internal=True)
 
     def start_tracking(self, service_name: str):
         """Starts tracking usage for a given service/tool name."""
         self.stop_tracking_current() # Ensure previous session is logged
 
-        service = service_manager.get_service_by_name(service_name)
+        service = self.service_manager.get_service_by_name(service_name)
         if service:
             self.active_service_id = service['id']
             self.session_start_time = datetime.datetime.now()
@@ -60,8 +63,7 @@ class MetricsManager:
 
     def _log_usage(self, service_id: int, milliseconds: int):
         """Logs the usage data to the database."""
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = self.conn.cursor()
         today_str = datetime.date.today().isoformat() # YYYY-MM-DD
 
         # Check if an entry for today already exists for this service
@@ -84,6 +86,4 @@ class MetricsManager:
                 "INSERT INTO usage_metrics (service_id, milliseconds, day) VALUES (?, ?, ?)",
                 (service_id, milliseconds, today_str)
             )
-        conn.commit()
-        conn.close()
-
+        self.conn.commit()

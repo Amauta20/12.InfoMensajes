@@ -1,11 +1,11 @@
 import datetime
 from zoneinfo import ZoneInfo
 from PyQt6.QtCore import QDateTime, Qt, QTimeZone
-from app.db import settings_manager
+from app.db.settings_manager import SettingsManager # Changed import
 
 def get_current_timezone():
     """Returns the configured timezone as a ZoneInfo object."""
-    tz_name = settings_manager.get_timezone()
+    tz_name = SettingsManager.get_instance().get_timezone() # Use singleton
     return ZoneInfo(tz_name)
 
 def to_utc(dt_obj: datetime.datetime) -> datetime.datetime:
@@ -66,7 +66,7 @@ def get_current_qdatetime() -> QDateTime:
 
 def format_datetime(dt_obj: datetime.datetime) -> str:
     """Formats a datetime object into a string using the configured datetime format."""
-    return dt_obj.strftime(settings_manager.get_datetime_format())
+    return dt_obj.strftime(SettingsManager.get_instance().get_datetime_format()) # Use singleton
 
 def convert_strftime_to_qt_format(strftime_format: str) -> str:
     """Converts a Python strftime format string to a Qt QDateTime format string.
