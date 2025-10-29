@@ -8,6 +8,7 @@ from app.ui.main_window import MainWindow
 from app.db.database import create_schema, get_db_connection
 from app.search.search_manager import SearchManager
 from app.metrics.metrics_manager import MetricsManager
+from app.db.settings_manager import SettingsManager
 from app.db.notes_manager import NotesManager
 from app.db.kanban_manager import KanbanManager
 from app.security.vault_manager import vault_manager
@@ -22,9 +23,6 @@ os.environ["QTWEBENGINE_CHROMIUM_ARGUMENTS"] = "--use-angle=d3d11"
 os.environ["QT_OPENGL"] = "software"
 
 def main():
-    # Initialize metrics manager after schema is created
-    global_metrics_manager = MetricsManager.get_instance(conn)
-
     # Determine database path dynamically
     if getattr(sys, 'frozen', False):
         # Running in a bundled executable (e.g., PyInstaller)
@@ -43,6 +41,12 @@ def main():
 
     # Create a single connection here
     conn = get_db_connection(db_path)
+
+    # Initialize SettingsManager singleton
+    SettingsManager.initialize(conn)
+
+    # Initialize metrics manager after schema is created
+    global_metrics_manager = MetricsManager.get_instance(conn)
 
     # Ensure the database schema is created on startup
     if not os.path.exists(db_path):

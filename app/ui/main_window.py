@@ -44,6 +44,15 @@ from PyQt6.QtGui import QAction
 class LinkHandlingPage(QWebEnginePage):
     def acceptNavigationRequest(self, url, _type, isMainFrame):
         if _type == QWebEnginePage.NavigationType.NavigationTypeLinkClicked:
+            # Allow navigation to Microsoft login pages
+            allowed_hosts = [
+                "login.microsoftonline.com",
+                "login.live.com",
+                "teams.microsoft.com"
+            ]
+            if url.host() in allowed_hosts:
+                return super().acceptNavigationRequest(url, _type, isMainFrame)
+
             if self.url().host() != url.host():
                 QDesktopServices.openUrl(url)
                 return False
@@ -154,7 +163,7 @@ class MainWindow(QMainWindow):
         self.kanban_manager_instance = KanbanManager(self.conn)
         self.notes_manager_instance = NotesManager(self.conn)
         self.rss_manager_instance = RssManager(self.conn)
-        self.settings_manager_instance = SettingsManager(self.conn)
+        self.settings_manager_instance = SettingsManager.get_instance()
         self.search_manager_instance = SearchManager(self.conn)
         self.service_manager_instance = ServiceManager(self.conn)
         self.vault_manager_instance = VaultManager() # Singleton
@@ -237,15 +246,15 @@ class MainWindow(QMainWindow):
         self.web_view_stack.addWidget(self.notes_widget)
 
         # Kanban Widget
-        self.kanban_widget = KanbanWidget()
+        self.kanban_widget = KanbanWidget(self.settings_manager_instance)
         self.web_view_stack.addWidget(self.kanban_widget)
 
         # Gantt Chart Widget
-        self.gantt_chart_widget = GanttChartWidget()
+        self.gantt_chart_widget = GanttChartWidget(self.settings_manager_instance)
         self.web_view_stack.addWidget(self.gantt_chart_widget)
 
         # Checklist Widget
-        self.checklist_widget = ChecklistWidget()
+        self.checklist_widget = ChecklistWidget(self.settings_manager_instance, self.conn)
         self.web_view_stack.addWidget(self.checklist_widget)
 
         # Reminders Widget
@@ -261,7 +270,7 @@ class MainWindow(QMainWindow):
         self.web_view_stack.addWidget(self.vault_widget)
 
         # Sidebar
-        self.sidebar = Sidebar()
+        self.sidebar = Sidebar(self.service_manager_instance)
         self.sidebar.setFixedWidth(240)
 
         # Splitter to manage sidebar and web_view_stack

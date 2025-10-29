@@ -2,7 +2,8 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QPus
 from PyQt6.QtGui import QIcon, QFont
 from PyQt6.QtCore import Qt, QDateTime, pyqtSignal as Signal
 from app.db.checklist_manager import ChecklistManager
-from app.db import kanban_manager, settings_manager, database
+from app.db.kanban_manager import KanbanManager
+from app.db import settings_manager, database
 from app.utils import time_utils
 import datetime
 
@@ -123,10 +124,12 @@ class AddChecklistItemDialog(QDialog):
 class ChecklistWidget(QWidget):
     checklist_updated = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, settings_manager, conn, parent=None):
         super().__init__(parent)
-        self.conn = database.get_db_connection()
+        self.conn = conn
         self.manager = ChecklistManager(self.conn)
+        self.kanban_manager = KanbanManager(self.conn)
+        self.settings_manager = settings_manager
         self.current_checklist_id = None
 
         self.layout = QVBoxLayout(self)
@@ -204,7 +207,8 @@ class ChecklistWidget(QWidget):
 
     def load_kanban_cards(self):
         self.kanban_card_list.clear()
-        cards = kanban_manager.get_all_cards()
+        cards = self.kanban_manager.get_all_cards()
+        print(f"Loaded {len(cards)} Kanban cards.")
         for card in cards:
             item = QListWidgetItem(card['title'])
             item.setData(Qt.ItemDataRole.UserRole, card['id'])
@@ -213,6 +217,7 @@ class ChecklistWidget(QWidget):
     def load_independent_checklists(self):
         self.independent_checklist_list.clear()
         checklists = self.manager.get_independent_checklists()
+        print(f"Loaded {len(checklists)} independent checklists.")
         for checklist in checklists:
             item = QListWidgetItem(checklist['name'])
             item.setData(Qt.ItemDataRole.UserRole, checklist['id'])
@@ -246,8 +251,7 @@ class ChecklistWidget(QWidget):
 
     def on_independent_checklist_selected(self, item):
         self.current_checklist_id = item.data(Qt.ItemDataRole.UserRole)
-        self.checklist_items_label.setText(f"Checklist: {item.text()}")
-        self.load_checklist_items(self.independent_checklist_items_list)
+        print(f"Selected independent checklist ID: {self.current_checklist_id}")
 
     def create_checklist_item_widget(self, item_data):
         widget = QWidget()
@@ -270,7 +274,7 @@ class ChecklistWidget(QWidget):
         if item_data['due_at']:
             utc_dt = QDateTime.fromString(item_data['due_at'], Qt.DateFormat.ISODate)
             local_dt = utc_dt.toLocalTime()
-            due_date_text = local_dt.toString(time_utils.convert_strftime_to_qt_format(settings_manager.get_datetime_format()))
+            due_date_text = local_dt.toString(time_utils.convert_strftime_to_qt_format(self.settings_manager.get_datetime_format()))
             due_date_label = QLabel(f"({due_date_text})")
             layout.addWidget(due_date_label)
 

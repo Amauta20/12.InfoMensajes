@@ -1,5 +1,20 @@
 class SettingsManager:
+    _instance = None
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            raise Exception("SettingsManager singleton not initialized")
+        return cls._instance
+
+    @classmethod
+    def initialize(cls, conn):
+        if cls._instance is None:
+            cls._instance = cls(conn)
+
     def __init__(self, conn):
+        if self.__class__._instance is not None:
+            raise Exception("This class is a singleton! Use get_instance() to get the instance.")
         self.conn = conn
         self._settings_cache = {} # Internal cache
 

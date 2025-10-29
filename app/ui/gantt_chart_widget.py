@@ -51,10 +51,11 @@ class GanttBridge(QObject):
 
 
 class GanttChartWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, settings_manager, parent=None):
         super().__init__(parent)
         self.conn = database.get_db_connection()
         self.kanban_manager = KanbanManager(self.conn)
+        self.settings_manager = settings_manager
         self.tasks = []
         self.init_ui()
         self.refresh_gantt()
@@ -167,11 +168,11 @@ class GanttChartWidget(QWidget):
 
     def _get_dhtmlx_color(self, status):
         if status == "not_started":
-            return settings_manager.get_todo_color()
+            return self.settings_manager.get_todo_color()
         elif status == "in_progress":
-            return settings_manager.get_inprogress_color()
+            return self.settings_manager.get_inprogress_color()
         elif status == "completed":
-            return settings_manager.get_done_color()
+            return self.settings_manager.get_done_color()
         return "#808080" # Default grey
 
     def _generate_gantt_html(self):

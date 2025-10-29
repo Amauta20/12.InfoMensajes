@@ -4,7 +4,9 @@ from PyQt6.QtGui import QIcon
 import datetime
 from app.services import service_manager
 from app.db.kanban_manager import KanbanManager
-from app.db import checklist_manager, reminders_manager, database
+from app.db.checklist_manager import ChecklistManager
+from app.db.reminders_manager import RemindersManager
+from app.db import database
 from app.utils import time_utils
 
 class WelcomeWidget(QWidget):
@@ -17,6 +19,8 @@ class WelcomeWidget(QWidget):
         super().__init__(parent)
         self.conn = database.get_db_connection()
         self.kanban_manager = KanbanManager(self.conn)
+        self.checklist_manager = ChecklistManager(self.conn)
+        self.reminders_manager = RemindersManager(self.conn)
         self.layout = QVBoxLayout(self)
         self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.layout.setSpacing(20)
@@ -88,7 +92,7 @@ class WelcomeWidget(QWidget):
             })
 
         # Checklist items
-        checklist_items = checklist_manager.get_items_due_between(start_of_week, end_of_week)
+        checklist_items = self.checklist_manager.get_items_due_between(start_of_week, end_of_week)
         for item in checklist_items:
             tasks.append({
                 "type": "Checklist",
@@ -97,7 +101,7 @@ class WelcomeWidget(QWidget):
             })
 
         # Reminders
-        reminders = reminders_manager.get_reminders_due_between(start_of_week, end_of_week)
+        reminders = self.reminders_manager.get_reminders_due_between(start_of_week, end_of_week)
         for reminder in reminders:
             tasks.append({
                 "type": "Recordatorio",
@@ -117,7 +121,7 @@ class WelcomeWidget(QWidget):
             if child.widget():
                 child.widget().deleteLater()
 
-        catalog = service_manager.load_catalog()
+        catalog = service_manager.ServiceManager.load_catalog()
         row, col = 0, 0
         for service in catalog:
             btn = QPushButton(QIcon(service.get("icon", "")), service["name"])

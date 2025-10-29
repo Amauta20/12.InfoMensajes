@@ -13,10 +13,11 @@ from app.ui.gantt_chart_widget import GanttChartWidget
 class KanbanWidget(QWidget):
     kanban_updated = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, settings_manager, parent=None):
         super().__init__(parent)
         self.conn = database.get_db_connection()
         self.manager = KanbanManager(self.conn)
+        self.settings_manager = settings_manager
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(10, 10, 10, 10)
         self.layout.setSpacing(10)
@@ -182,11 +183,11 @@ class KanbanWidget(QWidget):
 
             # Set background color based on column
             if column_name == "Por Hacer":
-                item.setBackground(QColor(settings_manager.get_todo_color()))
+                item.setBackground(QColor(self.settings_manager.get_todo_color()))
             elif column_name == "En Progreso":
-                item.setBackground(QColor(settings_manager.get_inprogress_color()))
+                item.setBackground(QColor(self.settings_manager.get_inprogress_color()))
             else: # Assuming other columns are 'Done' or similar
-                item.setBackground(QColor(settings_manager.get_done_color()))
+                item.setBackground(QColor(self.settings_manager.get_done_color()))
 
             item.setForeground(QColor("#FFFFFF")) # White text
             item.setFont(QFont("Segoe UI", 10))
@@ -194,7 +195,7 @@ class KanbanWidget(QWidget):
             card_list.setStyleSheet("QListWidget::item { border-bottom: 1px solid #555555; padding: 5px; }")
 
     def add_kanban_card(self, column_id):
-        dialog = AddKanbanCardDialog(self)
+        dialog = AddKanbanCardDialog(self.settings_manager, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             title, description, assignee, due_date_qdt = dialog.get_card_data()
             if title:

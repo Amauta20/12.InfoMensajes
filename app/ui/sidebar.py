@@ -85,7 +85,7 @@ class Sidebar(QWidget):
         self.load_services() # Refresh the service list
 
     def _add_custom_service(self):
-        dialog = AddServiceDialog(self)
+        dialog = AddServiceDialog(parent=self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             name, url, icon = dialog.get_service_data()
             if name and url:

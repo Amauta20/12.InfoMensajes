@@ -69,6 +69,18 @@ class ChecklistManager:
         if rows:
             processed_results = self._process_checklist_join_results(rows)
             return processed_results[0] if processed_results else None
+        else:
+            # If no rows, it means the checklist itself might exist but has no items.
+            # Fetch just the checklist details.
+            cursor.execute("SELECT id, name, kanban_card_id FROM checklists WHERE id = ?", (checklist_id,))
+            checklist_row = cursor.fetchone()
+            if checklist_row:
+                return {
+                    'id': checklist_row['id'],
+                    'name': checklist_row['name'],
+                    'kanban_card_id': checklist_row['kanban_card_id'],
+                    'items': []
+                }
         return None
 
     def update_checklist_name(self, checklist_id, new_name):
@@ -148,7 +160,12 @@ class ChecklistManager:
             ORDER BY c.id DESC, ci.id ASC
         """, (kanban_card_id,))
         rows = cursor.fetchall()
-        return self._process_checklist_join_results(rows)
+        if rows:
+            processed_results = self._process_checklist_join_results(rows)
+            return processed_results
+        else:
+            # If no rows, it means no checklist is associated with this Kanban card.
+            return []
 
     def get_independent_checklists(self):
         """Retrieves all checklists not associated with a Kanban card."""
@@ -164,3 +181,58 @@ class ChecklistManager:
         """)
         rows = cursor.fetchall()
         return self._process_checklist_join_results(rows)
+
+    def get_items_due_between(self, start_date, end_date):
+        """Retrieves all checklist items due between two dates."""
+        cursor = self.conn.cursor()
+        start_date_utc_str = time_utils.to_utc(start_date).isoformat()
+        end_date_utc_str = time_utils.to_utc(end_date).isoformat()
+        cursor.execute("""
+            SELECT * FROM checklist_items 
+            WHERE due_at BETWEEN ? AND ? AND is_checked = 0
+            ORDER BY due_at ASC
+        """, (start_date_utc_str, end_date_utc_str))
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows] if rows else []
+
+    def get_pre_due_checklist_items(self, pre_notification_offset_minutes):
+        """Retrieves checklist items that are due within the pre-notification offset and have not been pre-notified."""
+        cursor = self.conn.cursor()
+        now = datetime.datetime.now()
+        now_utc = time_utils.to_utc(now)
+        pre_due_time_utc = now_utc + datetime.timedelta(minutes=pre_notification_offset_minutes)
+
+        now_str = now_utc.isoformat()
+        pre_due_time_str = pre_due_time_utc.isoformat()
+
+        cursor.execute("""
+            SELECT id, text, due_at FROM checklist_items 
+            WHERE due_at > ? AND due_at <= ? AND is_checked = 0 AND pre_notified_at IS NULL
+        """, (now_str, pre_due_time_str))
+        
+        items = []
+        for row in cursor.fetchall():
+            item = dict(row)
+            if item['due_at']:
+                utc_dt = datetime.datetime.fromisoformat(item['due_at'])
+                item['due_at'] = time_utils.from_utc(utc_dt).isoformat()
+            items.append(item)
+        return items
+
+    def get_actual_due_checklist_items(self):
+        """Retrieves all due and not notified checklist items."""
+        cursor = self.conn.cursor()
+        now_utc = time_utils.to_utc(datetime.datetime.now()).isoformat()
+        cursor.execute("""
+            SELECT id, text, due_at, pre_notified_at FROM checklist_items 
+            WHERE due_at <= ? AND is_checked = 0 AND is_notified = 0
+        """, (now_utc,))
+        
+        items = []
+        for row in cursor.fetchall():
+            item = dict(row)
+            if item['due_at']:
+                utc_dt = datetime.datetime.fromisoformat(item['due_at'])
+                item['due_at'] = time_utils.from_utc(utc_dt).isoformat()
+            items.append(item)
+        return items

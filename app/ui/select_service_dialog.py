@@ -26,12 +26,6 @@ class SelectServiceDialog(QDialog):
 
         self.load_catalog_services()
 
-        # Custom Service Button
-        self.custom_button = QPushButton("Añadir Servicio URL Personalizado")
-        self.custom_button.clicked.connect(self.custom_service_requested.emit)
-        self.custom_button.clicked.connect(self.accept) # Close this dialog after emitting
-        self.layout.addWidget(self.custom_button)
-
         # Action Buttons
         self.button_layout = QHBoxLayout()
         self.select_button = QPushButton("Seleccionar")
@@ -47,7 +41,7 @@ class SelectServiceDialog(QDialog):
         self.layout.addLayout(self.button_layout)
 
     def load_catalog_services(self):
-        catalog = service_manager.load_catalog()
+        catalog = service_manager.ServiceManager.load_catalog()
         for service in catalog:
             item = QListWidgetItem(service['name'])
             item.setData(Qt.ItemDataRole.UserRole, service) # Store full service dict

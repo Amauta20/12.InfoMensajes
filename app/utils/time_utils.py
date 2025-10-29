@@ -10,6 +10,9 @@ def get_current_timezone():
 
 def to_utc(dt_obj: datetime.datetime) -> datetime.datetime:
     """Converts a timezone-aware datetime object to UTC."""
+    if isinstance(dt_obj, datetime.date) and not isinstance(dt_obj, datetime.datetime):
+        dt_obj = datetime.datetime.combine(dt_obj, datetime.time.min)
+
     if dt_obj.tzinfo is None:
         # Assume local timezone if not timezone-aware
         local_tz = datetime.datetime.now().astimezone().tzinfo
