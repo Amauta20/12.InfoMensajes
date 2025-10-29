@@ -1,22 +1,24 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDateEdit, QTimeEdit, QHBoxLayout, QDialogButtonBox, QMessageBox
-from PyQt6.QtCore import QDateTime, QDate, QTime
+from PyQt6.QtCore import QDateTime
 from app.utils import time_utils
 
-class AddReminderDialog(QDialog):
-    def __init__(self, parent=None):
+class EditReminderDialog(QDialog):
+    def __init__(self, current_text, current_due_date, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Nuevo Recordatorio")
+        self.setWindowTitle("Editar Recordatorio")
         self.layout = QVBoxLayout(self)
 
         self.form_layout = QFormLayout()
-        self.reminder_text_input = QLineEdit()
+        self.reminder_text_input = QLineEdit(current_text)
         self.form_layout.addRow("Texto del recordatorio:", self.reminder_text_input)
 
         self.due_date_edit = QDateEdit()
         self.due_date_edit.setCalendarPopup(True)
-        self.due_date_edit.setDate(time_utils.get_current_qdatetime().date())
         self.due_time_edit = QTimeEdit()
-        self.due_time_edit.setTime(time_utils.get_current_qdatetime().time())
+
+        if current_due_date:
+            self.due_date_edit.setDate(current_due_date.date())
+            self.due_time_edit.setTime(current_due_date.time())
 
         due_layout = QHBoxLayout()
         due_layout.addWidget(self.due_date_edit)

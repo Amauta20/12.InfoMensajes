@@ -28,7 +28,7 @@ from app.ui.notes_widget import NotesWidget
 from app.ui.kanban_widget import KanbanWidget
 from app.ui.gantt_chart_widget import GanttChartWidget
 from app.ui.checklist_widget import ChecklistWidget
-from app.ui.reminders_widget import RemindersWidget
+from app.ui.agenda_widget import AgendaWidget
 from app.ui.pomodoro_widget import PomodoroWidget
 from app.ui.rss_reader_widget import RssReaderWidget
 from app.ui.vault_widget import VaultWidget
@@ -36,6 +36,8 @@ from app.metrics.metrics_manager import MetricsManager
 
 from app.ui.select_service_dialog import SelectServiceDialog
 from app.ui.unified_settings_dialog import UnifiedSettingsDialog
+from app.ui.about_dialog import AboutDialog
+from app.ui.help_widget import HelpWidget
 from PyQt6.QtGui import QDesktopServices
 
 from PyQt6.QtWidgets import QMenu, QApplication, QStyle
@@ -209,20 +211,35 @@ class MainWindow(QMainWindow):
 
         # --- Header (Toolbar) ---
         self.toolbar = self.addToolBar("Barra de Herramientas Principal")
+
+        # Create a container widget for toolbar items to manage layout
+        toolbar_container = QWidget()
+        toolbar_layout = QHBoxLayout(toolbar_container)
+        toolbar_layout.setContentsMargins(0, 0, 20, 0) # Add 20px right margin
+        toolbar_layout.setSpacing(5)
+
         self.search_input = QLineEdit(self)
         self.search_input.setPlaceholderText("Búsqueda Global (Notas, Kanban, Texto Pegado)")
         self.search_input.setFixedWidth(300)
         self.search_input.returnPressed.connect(self.perform_global_search)
-        self.toolbar.addWidget(self.search_input)
+        toolbar_layout.addWidget(self.search_input)
 
-        self.toolbar.addSeparator()
+        # self.toolbar.addSeparator() # Separators are not needed with QHBoxLayout spacing
 
         self.pomodoro_widget = PomodoroWidget(self.settings_manager_instance)
-        self.toolbar.addWidget(self.pomodoro_widget)
+        toolbar_layout.addWidget(self.pomodoro_widget)
 
         self.general_settings_button = QPushButton("Configuración General")
         self.general_settings_button.clicked.connect(self.open_unified_settings_dialog)
-        self.toolbar.addWidget(self.general_settings_button)
+        toolbar_layout.addWidget(self.general_settings_button)
+
+        toolbar_layout.addStretch() # This will push the following widgets to the right
+
+        self.help_button = QPushButton("Ayuda")
+        self.help_button.clicked.connect(self.open_about_dialog)
+        toolbar_layout.addWidget(self.help_button)
+
+        self.toolbar.addWidget(toolbar_container)
 
         # Global Search Shortcut (Ctrl+F)
         self.search_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
@@ -257,9 +274,9 @@ class MainWindow(QMainWindow):
         self.checklist_widget = ChecklistWidget(self.settings_manager_instance, self.conn)
         self.web_view_stack.addWidget(self.checklist_widget)
 
-        # Reminders Widget
-        self.reminders_widget = RemindersWidget()
-        self.web_view_stack.addWidget(self.reminders_widget)
+        # Agenda Widget
+        self.agenda_widget = AgendaWidget(self.conn)
+        self.web_view_stack.addWidget(self.agenda_widget)
 
         # RSS Reader Widget
         self.rss_reader_widget = RssReaderWidget()
@@ -268,6 +285,10 @@ class MainWindow(QMainWindow):
         # Vault Widget
         self.vault_widget = VaultWidget()
         self.web_view_stack.addWidget(self.vault_widget)
+
+        # Help Widget
+        self.help_widget = HelpWidget()
+        self.web_view_stack.addWidget(self.help_widget)
 
         # Sidebar
         self.sidebar = Sidebar(self.service_manager_instance)
@@ -289,19 +310,19 @@ class MainWindow(QMainWindow):
         self.sidebar.show_kanban_requested.connect(self.show_kanban_tools)
         self.sidebar.show_gantt_chart_requested.connect(self.show_gantt_chart_tools)
         self.sidebar.show_checklist_requested.connect(self.show_checklist_tools)
-        self.sidebar.show_reminders_requested.connect(self.show_reminders_tools)
+        self.sidebar.show_reminders_requested.connect(self.show_agenda_tools)
         self.sidebar.show_rss_reader_requested.connect(self.show_rss_reader_tools)
         self.sidebar.show_vault_requested.connect(self.show_vault_tools)
 
         # Welcome widget signals
         self.welcome_widget.show_kanban_requested.connect(self.show_kanban_tools)
         self.welcome_widget.show_checklist_requested.connect(self.show_checklist_tools)
-        self.welcome_widget.show_reminders_requested.connect(self.show_reminders_tools)
+        self.welcome_widget.show_reminders_requested.connect(self.show_agenda_tools)
 
         # Productivity widget update signals
         self.kanban_widget.kanban_updated.connect(self.welcome_widget.refresh)
         self.checklist_widget.checklist_updated.connect(self.welcome_widget.refresh)
-        self.reminders_widget.reminders_updated.connect(self.welcome_widget.refresh)
+        self.agenda_widget.agenda_updated.connect(self.welcome_widget.refresh)
 
         self.kanban_widget.kanban_updated.connect(self.checklist_widget.refresh_kanban_cards)
         self.kanban_widget.kanban_updated.connect(self.gantt_chart_widget.refresh_gantt) # Sync Kanban -> Gantt
@@ -355,16 +376,16 @@ class MainWindow(QMainWindow):
 
     def check_for_notifications(self):
         # Get pre-notification offset
-        pre_notification_offset_minutes = self.settings_manager_instance.get_pre_notification_offset()
+        pre_notification_offsets_minutes = self.settings_manager_instance.get_pre_notification_offset()
 
         # Check for pre-due reminders
-        pre_due_reminders = self.reminders_manager.get_pre_due_reminders(pre_notification_offset_minutes)
+        pre_due_reminders = self.reminders_manager.get_pre_due_reminders(pre_notification_offsets_minutes)
         for reminder in pre_due_reminders:
             self.show_notification("Recordatorio Próximo", f"'{reminder['text']}' vence pronto ({reminder['due_at']})")
             self.reminders_manager.update_reminder(reminder['id'], pre_notified_at=time_utils.to_utc(time_utils.datetime_from_qdatetime(time_utils.get_current_qdatetime())).isoformat())
 
         # Check for pre-due checklist items
-        pre_due_checklist_items = self.checklist_manager_instance.get_pre_due_checklist_items(pre_notification_offset_minutes)
+        pre_due_checklist_items = self.checklist_manager_instance.get_pre_due_checklist_items(pre_notification_offsets_minutes)
         for item in pre_due_checklist_items:
             self.show_notification("Tarea de Checklist Próxima", f"'{item['text']}' vence pronto ({item['due_at']})")
             self.checklist_manager_instance.update_checklist_item(item['id'], pre_notified_at=time_utils.to_utc(time_utils.datetime_from_qdatetime(time_utils.get_current_qdatetime())).isoformat())
@@ -392,14 +413,21 @@ class MainWindow(QMainWindow):
 
     def open_unified_settings_dialog(self):
         dialog = UnifiedSettingsDialog(self.settings_manager_instance, self) # Pass settings manager
-        if dialog.exec():
-            # Reload settings that might affect UI or timers
-            self.pomodoro_widget.load_settings()
-            self.pomodoro_widget.reset_timer()
-            # Potentially refresh checklist/reminder views if date format changes
-            self.checklist_widget.load_checklist_items() # Assuming this refreshes display
-            self.reminders_widget.load_reminders() # Assuming this refreshes display
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            # self.settings_widget.load_settings() # Reload settings in the main settings widget
+            self.checklist_widget.load_kanban_cards()
+            self.checklist_widget.load_independent_checklists()
+            self.agenda_widget.load_agenda_items()
             self.kanban_widget.load_kanban_boards()
+
+    def open_about_dialog(self):
+        dialog = AboutDialog(self)
+        dialog.show_help_manual_requested.connect(self.show_help_manual)
+        dialog.exec()
+
+    def show_help_manual(self):
+        self.web_view_stack.setCurrentWidget(self.help_widget)
+        self.track_current_widget_usage()
 
     def show_notes_tools(self):
         self.web_view_stack.setCurrentWidget(self.notes_widget)
@@ -418,8 +446,10 @@ class MainWindow(QMainWindow):
         self.web_view_stack.setCurrentWidget(self.checklist_widget)
         self.track_current_widget_usage()
 
-    def show_reminders_tools(self):
-        self.web_view_stack.setCurrentWidget(self.reminders_widget)
+    def show_agenda_tools(self):
+        self.web_view_stack.setCurrentWidget(self.agenda_widget)
+        self.agenda_widget.load_agenda_items() # Ensure items are reloaded when widget is shown
+        self.track_current_widget_usage()
 
     def show_rss_reader_tools(self):
         self.web_view_stack.setCurrentWidget(self.rss_reader_widget)
@@ -449,7 +479,7 @@ class MainWindow(QMainWindow):
             elif current_widget == self.kanban_widget: service_name = "Kanban"
             elif current_widget == self.gantt_chart_widget: service_name = "Gantt"
             elif current_widget == self.checklist_widget: service_name = "Checklist"
-            elif current_widget == self.reminders_widget: service_name = "Recordatorios"
+            elif current_widget == self.agenda_widget: service_name = "Agenda"
             elif current_widget == self.rss_reader_widget: service_name = "Lector RSS"
             elif current_widget == self.vault_widget: service_name = "Bóveda"
             elif current_widget == self.search_results_widget: service_name = "Búsqueda"

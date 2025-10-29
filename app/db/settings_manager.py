@@ -39,11 +39,45 @@ class SettingsManager:
         self._settings_cache[key] = str(value) # Update the cache with the new value
 
     def get_pre_notification_offset(self):
+        """Retrieves the global pre-notification offsets in minutes."""
+        days = self.get_pre_notification_offset_days()
+        hours = self.get_pre_notification_offset_hours()
+        minutes = self.get_pre_notification_offset_minutes()
+        
+        offsets = []
+        if days > 0:
+            offsets.append(days * 24 * 60)
+        if hours > 0:
+            offsets.append(hours * 60)
+        if minutes > 0:
+            offsets.append(minutes)
+            
+        return offsets
+
+    def get_pre_notification_offset_days(self):
+        """Retrieves the pre-notification offset in days."""
+        offset = self.get_setting("pre_notification_offset_days")
+        return int(offset) if offset else 1 # Default to 1 day
+
+    def set_pre_notification_offset_days(self, days):
+        """Saves the pre-notification offset in days."""
+        self.set_setting("pre_notification_offset_days", days)
+
+    def get_pre_notification_offset_hours(self):
+        """Retrieves the pre-notification offset in hours."""
+        offset = self.get_setting("pre_notification_offset_hours")
+        return int(offset) if offset else 1 # Default to 1 hour
+
+    def set_pre_notification_offset_hours(self, hours):
+        """Saves the pre-notification offset in hours."""
+        self.set_setting("pre_notification_offset_hours", hours)
+
+    def get_pre_notification_offset_minutes(self):
         """Retrieves the global pre-notification offset in minutes."""
         offset = self.get_setting("pre_notification_offset_minutes")
         return int(offset) if offset else 15 # Default to 15 minutes
 
-    def set_pre_notification_offset(self, minutes):
+    def set_pre_notification_offset_minutes(self, minutes):
         """Saves the global pre-notification offset in minutes."""
         self.set_setting("pre_notification_offset_minutes", minutes)
 

@@ -195,29 +195,32 @@ class ChecklistManager:
         rows = cursor.fetchall()
         return [dict(row) for row in rows] if rows else []
 
-    def get_pre_due_checklist_items(self, pre_notification_offset_minutes):
-        """Retrieves checklist items that are due within the pre-notification offset and have not been pre-notified."""
-        cursor = self.conn.cursor()
-        now = datetime.datetime.now()
-        now_utc = time_utils.to_utc(now)
-        pre_due_time_utc = now_utc + datetime.timedelta(minutes=pre_notification_offset_minutes)
+    def get_pre_due_checklist_items(self, pre_notification_offsets_minutes):
+        """Retrieves checklist items that are due within the pre-notification offsets and have not been pre-notified."""
+        all_items = []
+        for offset_minutes in pre_notification_offsets_minutes:
+            cursor = self.conn.cursor()
+            now = datetime.datetime.now()
+            now_utc = time_utils.to_utc(now)
+            pre_due_time_utc = now_utc + datetime.timedelta(minutes=offset_minutes)
 
-        now_str = now_utc.isoformat()
-        pre_due_time_str = pre_due_time_utc.isoformat()
+            now_str = now_utc.isoformat()
+            pre_due_time_str = pre_due_time_utc.isoformat()
 
-        cursor.execute("""
-            SELECT id, text, due_at FROM checklist_items 
-            WHERE due_at > ? AND due_at <= ? AND is_checked = 0 AND pre_notified_at IS NULL
-        """, (now_str, pre_due_time_str))
-        
-        items = []
-        for row in cursor.fetchall():
-            item = dict(row)
-            if item['due_at']:
-                utc_dt = datetime.datetime.fromisoformat(item['due_at'])
-                item['due_at'] = time_utils.from_utc(utc_dt).isoformat()
-            items.append(item)
-        return items
+            cursor.execute("""
+                SELECT id, text, due_at FROM checklist_items 
+                WHERE due_at > ? AND due_at <= ? AND is_checked = 0 AND pre_notified_at IS NULL
+            """, (now_str, pre_due_time_str))
+            
+            items = []
+            for row in cursor.fetchall():
+                item = dict(row)
+                if item['due_at']:
+                    utc_dt = datetime.datetime.fromisoformat(item['due_at'])
+                    item['due_at'] = time_utils.from_utc(utc_dt).isoformat()
+                items.append(item)
+            all_items.extend(items)
+        return all_items
 
     def get_actual_due_checklist_items(self):
         """Retrieves all due and not notified checklist items."""

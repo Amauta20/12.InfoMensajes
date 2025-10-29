@@ -111,8 +111,16 @@ class KanbanManager:
         return report
 
     def get_all_cards(self):
-        """Retrieves all Kanban cards from the database."""
-        cards = self.conn.execute("SELECT id, column_id, title, description, created_at, started_at, finished_at, due_date, start_date, end_date FROM kanban_cards ORDER BY id DESC").fetchall()
+        """Retrieves all Kanban cards from the database, including their column name."""
+        cards = self.conn.execute("""
+            SELECT 
+                kc.id, kc.column_id, kc.title, kc.description, kc.created_at, 
+                kc.started_at, kc.finished_at, kc.due_date, kc.start_date, kc.end_date,
+                kco.name AS column_name
+            FROM kanban_cards kc
+            JOIN kanban_columns kco ON kc.column_id = kco.id
+            ORDER BY kc.id DESC
+        """).fetchall()
         return cards
 
     def get_cards_due_between(self, start_date, end_date):

@@ -36,11 +36,21 @@ class UnifiedSettingsDialog(QDialog):
         ])
         self.form_layout.addRow(self.datetime_format_label, self.datetime_format_combo)
 
-        # Pre-notification Offset Setting
-        self.pre_notification_offset_label = QLabel("Pre-notificación (minutos antes):")
-        self.pre_notification_offset_spin = QSpinBox()
-        self.pre_notification_offset_spin.setRange(1, 120) # Max 2 hours before
-        self.form_layout.addRow(self.pre_notification_offset_label, self.pre_notification_offset_spin)
+        # Pre-notification Offset Settings
+        self.pre_notification_days_label = QLabel("Pre-notificación (días antes):")
+        self.pre_notification_days_spin = QSpinBox()
+        self.pre_notification_days_spin.setRange(0, 30)
+        self.form_layout.addRow(self.pre_notification_days_label, self.pre_notification_days_spin)
+
+        self.pre_notification_hours_label = QLabel("Pre-notificación (horas antes):")
+        self.pre_notification_hours_spin = QSpinBox()
+        self.pre_notification_hours_spin.setRange(0, 23)
+        self.form_layout.addRow(self.pre_notification_hours_label, self.pre_notification_hours_spin)
+
+        self.pre_notification_minutes_label = QLabel("Pre-notificación (minutos antes):")
+        self.pre_notification_minutes_spin = QSpinBox()
+        self.pre_notification_minutes_spin.setRange(0, 59)
+        self.form_layout.addRow(self.pre_notification_minutes_label, self.pre_notification_minutes_spin)
 
         # Pomodoro duration
         self.pomodoro_label = QLabel("Pomodoro (minutos):")
@@ -88,7 +98,9 @@ class UnifiedSettingsDialog(QDialog):
     def load_settings(self):
         self.timezone_combo.setCurrentText(self.settings_manager.get_timezone())
         self.datetime_format_combo.setCurrentText(self.settings_manager.get_datetime_format())
-        self.pre_notification_offset_spin.setValue(self.settings_manager.get_pre_notification_offset())
+        self.pre_notification_days_spin.setValue(self.settings_manager.get_pre_notification_offset_days())
+        self.pre_notification_hours_spin.setValue(self.settings_manager.get_pre_notification_offset_hours())
+        self.pre_notification_minutes_spin.setValue(self.settings_manager.get_pre_notification_offset_minutes())
         self.pomodoro_spinbox.setValue(self.settings_manager.get_pomodoro_duration())
         self.short_break_spinbox.setValue(self.settings_manager.get_short_break_duration())
         self.long_break_spinbox.setValue(self.settings_manager.get_long_break_duration())
@@ -116,7 +128,9 @@ class UnifiedSettingsDialog(QDialog):
     def save_settings(self):
         self.settings_manager.set_timezone(self.timezone_combo.currentText())
         self.settings_manager.set_datetime_format(self.datetime_format_combo.currentText())
-        self.settings_manager.set_pre_notification_offset(self.pre_notification_offset_spin.value())
+        self.settings_manager.set_pre_notification_offset_days(self.pre_notification_days_spin.value())
+        self.settings_manager.set_pre_notification_offset_hours(self.pre_notification_hours_spin.value())
+        self.settings_manager.set_pre_notification_offset_minutes(self.pre_notification_minutes_spin.value())
         self.settings_manager.set_pomodoro_duration(self.pomodoro_spinbox.value())
         self.settings_manager.set_short_break_duration(self.short_break_spinbox.value())
         self.settings_manager.set_long_break_duration(self.long_break_spinbox.value())

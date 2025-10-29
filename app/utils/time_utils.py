@@ -93,3 +93,11 @@ def get_week_start_end():
     start_of_week = today - datetime.timedelta(days=today.weekday())
     end_of_week = start_of_week + datetime.timedelta(days=6)
     return start_of_week, end_of_week
+
+def qdatetime_to_utc_iso(qdt: QDateTime) -> str:
+    """Converts a QDateTime object to a UTC ISO 8601 string."""
+    if not qdt.timeZone().isValid():
+        # If no timezone, assume it's in the current local timezone
+        qdt.setTimeZone(QTimeZone(get_current_timezone().key.encode()))
+    utc_qdt = qdt.toUTC()
+    return utc_qdt.toString(Qt.DateFormat.ISODate)
