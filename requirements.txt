@@ -5,3 +5,5 @@ ruff
 black
 mypy
 openpyxl
+pygame
+mutagen

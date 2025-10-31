@@ -226,9 +226,14 @@ class KanbanWidget(QWidget):
             view_action.triggered.connect(lambda checked, c_id=card_id: self.view_kanban_card_details(c_id))
             menu.addAction(view_action)
 
+            # Edit action
+            edit_action = QAction("Editar Tarjeta", self)
+            edit_action.triggered.connect(lambda: self.edit_kanban_card(item))
+            menu.addAction(edit_action)
+
             # Delete action
             delete_action = QAction("Eliminar Tarjeta", self)
-            delete_action.triggered.connect(lambda checked, c_id=card_id: self.delete_kanban_card(c_id))
+            delete_action.triggered.connect(lambda: self.delete_kanban_card(card_id))
             menu.addAction(delete_action)
 
             menu.exec(list_widget.mapToGlobal(pos))
@@ -245,9 +250,13 @@ class KanbanWidget(QWidget):
         self.kanban_updated.emit()
 
     def delete_kanban_card(self, card_id):
-        self.manager.delete_card(card_id)
-        self.load_kanban_boards() # Refresh all boards
-        self.kanban_updated.emit()
+        reply = QMessageBox.question(self, 'Eliminar Tarjeta', '¿Estás seguro de que quieres eliminar esta tarjeta?',
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
+
+        if reply == QMessageBox.StandardButton.Yes:
+            self.manager.delete_card(card_id)
+            self.load_kanban_boards() # Refresh all boards
+            self.kanban_updated.emit()
 
     def clear_completed_kanban_cards(self):
         completed_column_id = None

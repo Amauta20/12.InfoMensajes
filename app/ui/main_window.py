@@ -33,6 +33,7 @@ from app.ui.pomodoro_widget import PomodoroWidget
 from app.ui.rss_reader_widget import RssReaderWidget
 from app.ui.vault_widget import VaultWidget
 from app.metrics.metrics_manager import MetricsManager
+from app.ui.audio_player_widget import AudioPlayerWidget
 
 from app.ui.select_service_dialog import SelectServiceDialog
 from app.ui.unified_settings_dialog import UnifiedSettingsDialog
@@ -290,6 +291,10 @@ class MainWindow(QMainWindow):
         self.help_widget = HelpWidget()
         self.web_view_stack.addWidget(self.help_widget)
 
+        # Audio Player Widget
+        self.audio_player_widget = AudioPlayerWidget(self.settings_manager_instance)
+        self.web_view_stack.addWidget(self.audio_player_widget)
+
         # Sidebar
         self.sidebar = Sidebar(self.service_manager_instance)
         self.sidebar.setFixedWidth(240)
@@ -313,6 +318,7 @@ class MainWindow(QMainWindow):
         self.sidebar.show_reminders_requested.connect(self.show_agenda_tools)
         self.sidebar.show_rss_reader_requested.connect(self.show_rss_reader_tools)
         self.sidebar.show_vault_requested.connect(self.show_vault_tools)
+        self.sidebar.show_audio_player_requested.connect(self.show_audio_player_tools)
 
         # Welcome widget signals
         self.welcome_widget.show_kanban_requested.connect(self.show_kanban_tools)
@@ -460,6 +466,10 @@ class MainWindow(QMainWindow):
         self.web_view_stack.setCurrentWidget(self.vault_widget)
         self.track_current_widget_usage()
 
+    def show_audio_player_tools(self):
+        self.web_view_stack.setCurrentWidget(self.audio_player_widget)
+        self.track_current_widget_usage()
+
     def track_current_widget_usage(self):
         current_widget = self.web_view_stack.currentWidget()
         service_name = "Desconocido"
@@ -482,6 +492,7 @@ class MainWindow(QMainWindow):
             elif current_widget == self.agenda_widget: service_name = "Agenda"
             elif current_widget == self.rss_reader_widget: service_name = "Lector RSS"
             elif current_widget == self.vault_widget: service_name = "Bóveda"
+            elif current_widget == self.audio_player_widget: service_name = "Reproductor de Audio"
             elif current_widget == self.search_results_widget: service_name = "Búsqueda"
             # Add other internal widgets here
 

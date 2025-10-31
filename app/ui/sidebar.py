@@ -16,6 +16,7 @@ class Sidebar(QWidget):
     show_reminders_requested = Signal() # New signal to show RemindersWidget
     show_rss_reader_requested = Signal() # New signal to show RssReaderWidget
     show_vault_requested = Signal()
+    show_audio_player_requested = Signal()
 
     def __init__(self, service_manager_instance, parent=None):
         super().__init__(parent)
@@ -72,6 +73,10 @@ class Sidebar(QWidget):
         self.vault_button = QPushButton("Bóveda")
         self.vault_button.clicked.connect(self.show_vault_requested.emit)
         self.layout.addWidget(self.vault_button)
+
+        self.audio_player_button = QPushButton("Reproductor de Audio")
+        self.audio_player_button.clicked.connect(self.show_audio_player_requested.emit)
+        self.layout.addWidget(self.audio_player_button)
 
     # --- Service Management Methods ---
     def open_select_service_dialog(self):

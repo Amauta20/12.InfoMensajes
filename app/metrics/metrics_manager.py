@@ -33,6 +33,7 @@ class MetricsManager:
             ("Pomodoro", "internal://pomodoro", "pomodoro_icon.png"),
             ("Búsqueda", "internal://search", "search_icon.png"),
             ("Bienvenida", "internal://welcome", "welcome_icon.png"),
+            ("Reproductor de Audio", "internal://audioplayer", "audioplayer_icon.png"),
         ]
         for name, url, icon in internal_tools:
             if not self.service_manager.get_service_by_name(name):
