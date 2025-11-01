@@ -2,11 +2,12 @@ import os
 import random
 import time
 import pygame
-from mutagen.easyid3 import EasyID3
-from mutagen.mp3 import MP3
-from mutagen import MutagenError
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QFileDialog, QLabel, QSlider, QComboBox
+import logging
+import mutagen
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QFileDialog, QLabel, QSlider, QComboBox, QGroupBox, QGridLayout, QLineEdit, QMessageBox
 from PyQt6.QtCore import QUrl, Qt, QTimer
+from PyQt6.QtGui import QFont
+
 
 class AudioPlayerWidget(QWidget):
     @staticmethod
@@ -33,6 +34,7 @@ class AudioPlayerWidget(QWidget):
         # Initialize pygame mixer
         os.environ['SDL_VIDEODRIVER'] = 'dummy'
         pygame.init()
+        pygame.mixer.init(frequency=44100)
 
         self.SONG_END = pygame.USEREVENT + 1
         pygame.mixer.music.set_endevent(self.SONG_END)
@@ -46,35 +48,47 @@ class AudioPlayerWidget(QWidget):
         self.load_last_folder()
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
+        main_layout = QHBoxLayout(self)
 
-        # Folder selection
-        self.select_folder_button = QPushButton("Seleccionar Carpeta")
+        # Stylesheet for Font Awesome buttons
+        fa_button_style_main = "QPushButton { font-family: \"Font Awesome 6 Free\"; font-size: 18px; padding: 0px; margin: 0px; border: none; }"
+        fa_button_style_volume = "QPushButton { font-family: \"Font Awesome 6 Free\"; font-size: 16px; padding: 0px; margin: 0px; border: none; }"
+
+        # Left side (empty, as select_folder_button is moved)
+        left_layout = QVBoxLayout()
+
+        main_layout.addLayout(left_layout)
+
+        # Right side (Playlist, Search, and Controls)
+        right_layout = QVBoxLayout()
+        
+        # Folder selection button moved to right_layout and styled with Font Awesome
+        self.select_folder_button = QPushButton("\uf07b") # Folder Open icon
+        self.select_folder_button.setStyleSheet(fa_button_style_main) # Use the same style as main controls
+        self.select_folder_button.setFixedSize(36, 36)
         self.select_folder_button.clicked.connect(self.select_folder)
-        layout.addWidget(self.select_folder_button)
+        
+        # Create a horizontal layout for the folder button and search bar
+        top_controls_layout = QHBoxLayout()
+        top_controls_layout.addWidget(self.select_folder_button)
 
-        # Filters
-        filters_layout = QHBoxLayout()
-        self.artist_combo = QComboBox()
-        self.artist_combo.addItem("Todos los Artistas")
-        self.artist_combo.currentIndexChanged.connect(self.filter_playlist)
-        filters_layout.addWidget(self.artist_combo)
-
-        self.album_combo = QComboBox()
-        self.album_combo.addItem("Todos los Álbumes")
-        self.album_combo.currentIndexChanged.connect(self.filter_playlist)
-        filters_layout.addWidget(self.album_combo)
-        layout.addLayout(filters_layout)
+        # Search bar
+        self.search_bar = QLineEdit()
+        self.search_bar.setPlaceholderText("Buscar por nombre de canción...")
+        self.search_bar.textChanged.connect(self.filter_playlist)
+        top_controls_layout.addWidget(self.search_bar)
+        
+        right_layout.addLayout(top_controls_layout) # Add the new layout to right_layout
 
         # Playlist
         self.playlist_widget = QListWidget()
         self.playlist_widget.itemDoubleClicked.connect(self.play_selected)
-        layout.addWidget(self.playlist_widget)
+        right_layout.addWidget(self.playlist_widget)
 
         # Currently playing label
         self.current_track_label = QLabel("Ninguna canción seleccionada")
         self.current_track_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.current_track_label)
+        right_layout.addWidget(self.current_track_label)
 
         # Progress Slider
         progress_layout = QHBoxLayout()
@@ -86,29 +100,46 @@ class AudioPlayerWidget(QWidget):
         progress_layout.addWidget(self.current_time_label)
         progress_layout.addWidget(self.progress_slider)
         progress_layout.addWidget(self.total_time_label)
-        layout.addLayout(progress_layout)
+        right_layout.addLayout(progress_layout)
 
         # Controls
         controls_layout = QHBoxLayout()
-        self.prev_button = QPushButton("Anterior")
+
+        self.prev_button = QPushButton("\uf048") # Previous icon
+        self.prev_button.setStyleSheet(fa_button_style_main)
+        self.prev_button.setFixedSize(36, 36)
         self.prev_button.clicked.connect(self.play_previous)
-        self.play_pause_button = QPushButton("Play")
+        
+        self.play_pause_button = QPushButton("\uf04b") # Play icon (initial state)
+        self.play_pause_button.setStyleSheet(fa_button_style_main)
+        self.play_pause_button.setFixedSize(36, 36)
         self.play_pause_button.clicked.connect(self.toggle_play_pause)
-        self.next_button = QPushButton("Siguiente")
+        
+        self.next_button = QPushButton("\uf051") # Next icon
+        self.next_button.setStyleSheet(fa_button_style_main)
+        self.next_button.setFixedSize(36, 36)
         self.next_button.clicked.connect(self.play_next)
 
-        self.shuffle_button = QPushButton("Aleatorio")
+        self.shuffle_button = QPushButton("\uf074") # Shuffle icon
         self.shuffle_button.setCheckable(True)
+        self.shuffle_button.setStyleSheet(fa_button_style_main)
+        self.shuffle_button.setFixedSize(36, 36)
         self.shuffle_button.clicked.connect(self.toggle_shuffle)
 
-        self.repeat_button = QPushButton("Repetir")
+        self.repeat_button = QPushButton("\uf01e") # Repeat icon
         self.repeat_button.setCheckable(True)
+        self.repeat_button.setStyleSheet(fa_button_style_main)
+        self.repeat_button.setFixedSize(36, 36)
         self.repeat_button.clicked.connect(self.toggle_repeat)
 
-        self.volume_down_button = QPushButton("Vol-")
+        self.volume_down_button = QPushButton("\uf027") # Volume Down icon
+        self.volume_down_button.setStyleSheet(fa_button_style_volume)
+        self.volume_down_button.setFixedSize(32, 32)
         self.volume_down_button.clicked.connect(self.decrease_volume)
 
-        self.volume_up_button = QPushButton("Vol+")
+        self.volume_up_button = QPushButton("\uf028") # Volume Up icon
+        self.volume_up_button.setStyleSheet(fa_button_style_volume)
+        self.volume_up_button.setFixedSize(32, 32)
         self.volume_up_button.clicked.connect(self.increase_volume)
 
         controls_layout.addWidget(self.prev_button)
@@ -118,7 +149,11 @@ class AudioPlayerWidget(QWidget):
         controls_layout.addWidget(self.repeat_button)
         controls_layout.addWidget(self.volume_down_button)
         controls_layout.addWidget(self.volume_up_button)
-        layout.addLayout(controls_layout)
+        right_layout.addLayout(controls_layout)
+
+        main_layout.addLayout(right_layout)
+
+
 
     def load_last_folder(self):
         last_folder = self.settings_manager.get_setting('last_music_folder')
@@ -135,19 +170,21 @@ class AudioPlayerWidget(QWidget):
         self.audio_files = []
         for root, _, filenames in os.walk(folder_path):
             for filename in filenames:
-                if filename.endswith(('.mp3')):
+                if filename.endswith(('.mp3', '.wav', '.ogg', '.flac')):
                     full_path = os.path.join(root, filename)
                     try:
-                        audio = EasyID3(full_path)
-                        title = audio.get('title', [os.path.basename(full_path)])[0].strip()
-                        artist = audio.get('artist', ['Desconocido'])[0].strip()
-                        album = audio.get('album', ['Desconocido'])[0].strip()
+                        audio = mutagen.File(full_path, easy=True)
+                        if audio:
+                            title = audio.get('title', [os.path.basename(full_path)])[0].strip()
+                            artist = audio.get('artist', ['Desconocido'])[0].strip()
+                            album = audio.get('album', ['Desconocido'])[0].strip()
+                        else:
+                            raise mutagen.MutagenError("Could not load metadata")
                     except Exception:
                         title = os.path.basename(full_path)
                         artist = 'Desconocido'
                         album = 'Desconocido'
                     
-                    print(f"Loaded: {title}, Artist: {artist}, Album: {album}") # Debug print
                     self.audio_files.append({
                         'path': full_path,
                         'title': title,
@@ -159,39 +196,16 @@ class AudioPlayerWidget(QWidget):
         self.is_shuffled = False
         self.shuffle_button.setChecked(False)
 
-        self.populate_filters()
         self.update_playlist_widget()
 
         if self.audio_files and autoplay:
             self.current_index = 0
             self.play_track()
 
-    def populate_filters(self):
-        artists = {"Todos los Artistas"} | {track['artist'] for track in self.original_playlist}
-        albums = {"Todos los Álbumes"} | {track['album'] for track in self.original_playlist}
+    def filter_playlist(self, text):
+        search_text = text.lower()
 
-        self.artist_combo.blockSignals(True)
-        self.album_combo.blockSignals(True)
-
-        self.artist_combo.clear()
-        self.artist_combo.addItems(sorted(list(artists)))
-        self.album_combo.clear()
-        self.album_combo.addItems(sorted(list(albums)))
-
-        self.artist_combo.blockSignals(False)
-        self.album_combo.blockSignals(False)
-
-    def filter_playlist(self):
-        selected_artist = self.artist_combo.currentText()
-        selected_album = self.album_combo.currentText()
-
-        filtered_list = list(self.original_playlist)
-
-        if selected_artist != "Todos los Artistas":
-            filtered_list = [track for track in filtered_list if track['artist'] == selected_artist]
-
-        if selected_album != "Todos los Álbumes":
-            filtered_list = [track for track in filtered_list if track['album'] == selected_album]
+        filtered_list = [track for track in self.original_playlist if search_text in track['title'].lower()]
 
         # Store the currently playing track, if any
         current_playing_track = None
@@ -236,37 +250,53 @@ class AudioPlayerWidget(QWidget):
         if self.current_index != -1 and self.current_index < self.playlist_widget.count():
             self.playlist_widget.setCurrentRow(self.current_index)
 
-    def play_track(self):
+    def play_track(self, start_pos_sec=0):
+        logging.debug("Entering play_track")
         if 0 <= self.current_index < len(self.audio_files):
             track_path = self.audio_files[self.current_index]['path']
-            pygame.mixer.music.load(track_path)
-            pygame.mixer.music.play()
-            
-            self.is_paused = False
-            self.play_pause_button.setText("Pausa")
-            self.playlist_widget.setCurrentRow(self.current_index)
-            self.current_track_label.setText(self.audio_files[self.current_index]['title'])
+            logging.debug(f"track_path: {track_path}")
 
-            # Reset time tracking
-            self.paused_position_ms = 0
-            self.song_start_system_time = time.time()
-
-            # Update slider and time labels
             try:
-                track_info = MP3(track_path)
-                song_length_ms = int(track_info.info.length * 1000)
-                self.progress_slider.setMaximum(song_length_ms)
-                self.total_time_label.setText(self.format_time(song_length_ms))
+                logging.debug("Loading sound into pygame mixer directly")
+                pygame.mixer.music.load(track_path)
+                logging.debug("Sound loaded successfully")
+
+                logging.debug(f"Playing sound from position: {start_pos_sec}")
+                pygame.mixer.music.play(start=start_pos_sec)
+                logging.debug("Sound playing")
+
+                self.is_paused = False
+                self.play_pause_button.setText("\uf04c") # Pause icon
+                self.playlist_widget.setCurrentRow(self.current_index)
+                self.current_track_label.setText(self.audio_files[self.current_index]['title'])
+
+                # Reset time tracking
+                self.paused_position_ms = start_pos_sec * 1000
+                self.song_start_system_time = time.monotonic()
+
+                # Update slider and time labels
+                try:
+                    audio_info = mutagen.File(track_path)
+                    if audio_info:
+                        song_length_ms = int(audio_info.info.length * 1000)
+                        self.progress_slider.setMaximum(song_length_ms)
+                        self.total_time_label.setText(self.format_time(song_length_ms))
+                    else:
+                        raise mutagen.MutagenError("Could not load audio info")
+                except Exception as e:
+                    logging.error(f"Could not get song length: {e}")
+                    self.progress_slider.setMaximum(0)
+                    self.total_time_label.setText("00:00")
+
             except Exception as e:
-                print(f"Could not get song length: {e}")
-                self.progress_slider.setMaximum(0)
-                self.total_time_label.setText("00:00")
+                logging.error(f"General error in play_track: {e}", exc_info=True)
+                QMessageBox.critical(self, "Error", f"Error al reproducir la canción: {e}")
 
     def get_current_song_position_ms(self):
         if not pygame.mixer.music.get_busy() or self.is_paused:
             return self.paused_position_ms
         else:
-            elapsed_seconds = time.time() - self.song_start_system_time
+            elapsed_seconds = time.monotonic() - self.song_start_system_time
             return self.paused_position_ms + (elapsed_seconds * 1000)
 
     def check_music_status(self):
@@ -287,13 +317,7 @@ class AudioPlayerWidget(QWidget):
             return
 
         position_ms = self.progress_slider.value()
-        seconds = position_ms / 1000.0
-        
-        pygame.mixer.music.play(start=seconds)
-        
-        # Update time tracking state
-        self.paused_position_ms = position_ms
-        self.song_start_system_time = time.time()
+        self.play_track(start_pos_sec=position_ms / 1000.0)
 
         if self.is_paused:
             pygame.mixer.music.pause()
@@ -310,14 +334,14 @@ class AudioPlayerWidget(QWidget):
             # Resuming
             pygame.mixer.music.unpause()
             self.is_paused = False
-            self.play_pause_button.setText("Pausa")
+            self.play_pause_button.setText("\uf04c") # Pause icon
             # Resync the start time
-            self.song_start_system_time = time.time()
+            self.song_start_system_time = time.monotonic()
         else:
             # Pausing
             pygame.mixer.music.pause()
             self.is_paused = True
-            self.play_pause_button.setText("Play")
+            self.play_pause_button.setText("\uf04b") # Play icon
             # Record position when pausing
             self.paused_position_ms = self.get_current_song_position_ms()
 

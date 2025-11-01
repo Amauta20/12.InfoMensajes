@@ -22,7 +22,11 @@ os.environ["QT_QUICK_BACKEND"] = "software"
 os.environ["QTWEBENGINE_CHROMIUM_ARGUMENTS"] = "--use-angle=d3d11"
 os.environ["QT_OPENGL"] = "software"
 
+import logging
+
 def main():
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
     # Determine database path dynamically
     if getattr(sys, 'frozen', False):
         # Running in a bundled executable (e.g., PyInstaller)

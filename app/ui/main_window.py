@@ -42,7 +42,7 @@ from app.ui.help_widget import HelpWidget
 from PyQt6.QtGui import QDesktopServices
 
 from PyQt6.QtWidgets import QMenu, QApplication, QStyle
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QFontDatabase
 
 class LinkHandlingPage(QWebEnginePage):
     def acceptNavigationRequest(self, url, _type, isMainFrame):
@@ -159,6 +159,14 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.conn = conn # Store the connection
         self.metrics_manager = metrics_manager_instance
+
+        # Load Font Awesome font
+        font_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'fa-solid-900.ttf'))
+        if os.path.exists(font_path):
+            QFontDatabase.addApplicationFont(font_path)
+            print(f"Font Awesome loaded from: {font_path}")
+        else:
+            print(f"Font Awesome file not found at: {font_path}")
 
         # Instantiate all managers
         self.reminders_manager = RemindersManager(self.conn)

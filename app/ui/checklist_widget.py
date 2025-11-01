@@ -351,13 +351,15 @@ class ChecklistWidget(QWidget):
 
         layout.addStretch()
 
-        edit_button = QPushButton("✏️")
-        edit_button.setFixedWidth(30)
+        edit_button = QPushButton("\uf044") # Font Awesome edit icon
+        edit_button.setStyleSheet("QPushButton { font-family: \"Font Awesome 6 Free\"; font-size: 12px; padding: 0px; margin: 0px; border: none; }")
+        edit_button.setFixedSize(24, 24) # Keep fixed size for now, adjust if needed
         edit_button.clicked.connect(lambda ch, id=item_data['id'], txt=item_data['text'], due=local_dt: self.edit_checklist_item(id, txt, due))
         layout.addWidget(edit_button)
 
-        delete_button = QPushButton("🗑")
-        delete_button.setFixedWidth(30)
+        delete_button = QPushButton("\uf2ed") # Font Awesome trash icon
+        delete_button.setStyleSheet("QPushButton { font-family: \"Font Awesome 6 Free\"; font-size: 12px; padding: 0px; margin: 0px; border: none; }")
+        delete_button.setFixedSize(24, 24) # Keep fixed size for now, adjust if needed
         delete_button.clicked.connect(lambda ch, id=item_data['id']: self.delete_item(id))
         layout.addWidget(delete_button)
 

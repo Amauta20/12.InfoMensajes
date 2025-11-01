@@ -1,4 +1,4 @@
-PySide6
+PyQt6
 cryptography
 PyInstaller
 ruff
@@ -7,3 +7,6 @@ mypy
 openpyxl
 pygame
 mutagen
+pedalboard
+numpy
+soundfile

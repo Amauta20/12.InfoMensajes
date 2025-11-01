@@ -2,7 +2,8 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit
 from PyQt6.QtCore import Qt, QDateTime, pyqtSignal as Signal
 from PyQt6.QtGui import QAction
 from app.utils import time_utils
-from app.db import settings_manager, database
+from app.db.settings_manager import SettingsManager
+from app.db import database
 
 from app.db.notes_manager import NotesManager
 from app.ui.edit_note_dialog import EditNoteDialog
@@ -15,7 +16,7 @@ class NoteInput(QTextEdit):
         self.setFixedHeight(60)
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_Return and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+        if event.key() == Qt.Key.Key_Return and not event.modifiers() == Qt.KeyboardModifier.ShiftModifier: # Allow Shift+Enter for new line
             self.parent_widget.add_note_from_input()
             return
         super().keyPressEvent(event)
@@ -108,7 +109,7 @@ class NotesWidget(QWidget):
                 utc_dt = QDateTime.fromString(note['created_at'], Qt.DateFormat.ISODate)
                 utc_dt.setTimeSpec(Qt.TimeSpec.UTC)
                 local_dt = utc_dt.toLocalTime()
-                timestamp = local_dt.toString(time_utils.convert_strftime_to_qt_format(settings_manager.get_datetime_format()))
+                timestamp = local_dt.toString(time_utils.convert_strftime_to_qt_format(SettingsManager.get_instance().get_datetime_format()))
 
             item_text = f"{snippet} ({timestamp})"
             item = QListWidgetItem(item_text)

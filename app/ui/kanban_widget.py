@@ -279,7 +279,7 @@ class KanbanWidget(QWidget):
         card_details = self.manager.get_card_details(card_id)
         if not card_details: return
 
-        dialog = EditKanbanCardDialog(card_details['title'], card_details['description'], card_details['assignee'], card_details['due_date'], self)
+        dialog = EditKanbanCardDialog(self.settings_manager, card_details['title'], card_details['description'], card_details['assignee'], card_details['due_date'], self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             new_title, new_description, new_assignee, new_due_date_qdt = dialog.get_new_data()
             if new_title:
