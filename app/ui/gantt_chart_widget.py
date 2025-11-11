@@ -51,9 +51,9 @@ class GanttBridge(QObject):
 
 
 class GanttChartWidget(QWidget):
-    def __init__(self, settings_manager, parent=None):
+    def __init__(self, conn, settings_manager, parent=None):
         super().__init__(parent)
-        self.conn = database.get_db_connection()
+        self.conn = conn
         self.kanban_manager = KanbanManager(self.conn)
         self.settings_manager = settings_manager
         self.tasks = []

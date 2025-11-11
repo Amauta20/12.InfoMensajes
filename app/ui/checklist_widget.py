@@ -1,12 +1,14 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton, QInputDialog, QMessageBox, QListWidgetItem, QCheckBox, QLineEdit, QSplitter, QLabel, QTabWidget, QDateTimeEdit, QDialog, QFormLayout, QSizePolicy, QDateEdit, QTimeEdit, QMenu
-from PyQt6.QtGui import QIcon, QFont
-from PyQt6.QtCore import Qt, QDateTime, pyqtSignal as Signal
-from app.db.checklist_manager import ChecklistManager
-from app.db.kanban_manager import KanbanManager
-from app.db import settings_manager, database
+from PyQt6.QtWidgets import QDialog, QWidget, QVBoxLayout, QFormLayout, QLineEdit, QDateEdit, QTimeEdit, QCheckBox, QHBoxLayout, QPushButton, QListWidget, QLabel, QSizePolicy, QTabWidget, QListWidgetItem, QMenu, QInputDialog, QMessageBox
+from PyQt6.QtCore import Qt, QDateTime
+from PyQt6.QtCore import pyqtSignal as Signal
+
+from app.services_layer.checklist_service import ChecklistService
+from app.services_layer.kanban_service import KanbanService
+from app.db import settings_manager
 from app.utils import time_utils
 import datetime
 
+# Dialog classes (EditChecklistItemDialog, AddChecklistItemDialog) remain unchanged...
 class EditChecklistItemDialog(QDialog):
     def __init__(self, current_text, current_due_date, parent=None):
         super().__init__(parent)
@@ -124,11 +126,10 @@ class AddChecklistItemDialog(QDialog):
 class ChecklistWidget(QWidget):
     checklist_updated = Signal()
 
-    def __init__(self, settings_manager, conn, parent=None):
+    def __init__(self, checklist_service: ChecklistService, kanban_service: KanbanService, settings_manager, parent=None):
         super().__init__(parent)
-        self.conn = conn
-        self.manager = ChecklistManager(self.conn)
-        self.kanban_manager = KanbanManager(self.conn)
+        self.checklist_service = checklist_service
+        self.kanban_service = kanban_service
         self.settings_manager = settings_manager
         self.current_checklist_id = None
 
@@ -205,9 +206,32 @@ class ChecklistWidget(QWidget):
             self.tab_widget.setCurrentIndex(1)
             self.independent_checklist_list.setCurrentRow(0)
 
+    def _add_item_to_list(self, list_widget, item_data, row=None):
+        """Creates and adds a single checklist item widget to the list."""
+        item_widget = self.create_checklist_item_widget(item_data)
+        list_item = QListWidgetItem()
+        list_item.setSizeHint(item_widget.sizeHint())
+        list_item.setData(Qt.ItemDataRole.UserRole, item_data['id']) # Store item ID
+
+        if row is not None:
+            list_widget.insertItem(row, list_item)
+        else:
+            list_widget.addItem(list_item)
+            
+        list_widget.setItemWidget(list_item, item_widget)
+        return list_item
+
+    def _find_list_item(self, list_widget, item_id):
+        """Finds a QListWidgetItem in a given list widget by its ID."""
+        for i in range(list_widget.count()):
+            item = list_widget.item(i)
+            if item.data(Qt.ItemDataRole.UserRole) == item_id:
+                return item
+        return None
+
     def load_kanban_cards(self):
         self.kanban_card_list.clear()
-        cards = self.kanban_manager.get_all_cards()
+        cards = self.kanban_service.get_all_cards()
         for card in cards:
             item = QListWidgetItem(card['title'])
             item.setData(Qt.ItemDataRole.UserRole, card['id'])
@@ -215,7 +239,7 @@ class ChecklistWidget(QWidget):
 
     def load_independent_checklists(self):
         self.independent_checklist_list.clear()
-        checklists = self.manager.get_independent_checklists()
+        checklists = self.checklist_service.get_independent_checklists()
         for checklist in checklists:
             item = QListWidgetItem(checklist['name'])
             item.setData(Qt.ItemDataRole.UserRole, checklist['id'])
@@ -231,24 +255,20 @@ class ChecklistWidget(QWidget):
 
         card_id = current.data(Qt.ItemDataRole.UserRole)
         self.checklist_items_label.setText(f"Checklist para: {current.text()}")
-        checklists = self.manager.get_checklists_for_card(card_id)
+        checklists = self.checklist_service.get_checklists_for_card(card_id)
         
         if checklists:
             self.current_checklist_id = checklists[0]['id']
         else:
             checklist_name = f"Checklist para {current.text()}"
-            self.current_checklist_id = self.manager.create_checklist(checklist_name, card_id)
+            self.current_checklist_id = self.checklist_service.create_checklist(checklist_name, card_id)
         
         list_widget_to_load.clear()
         if self.current_checklist_id:
-            checklist = self.manager.get_checklist(self.current_checklist_id)
+            checklist = self.checklist_service.get_checklist(self.current_checklist_id)
             if checklist and checklist.get('items'):
                 for item_data in checklist['items']:
-                    item_widget = self.create_checklist_item_widget(item_data)
-                    list_item = QListWidgetItem()
-                    list_item.setSizeHint(item_widget.sizeHint())
-                    list_widget_to_load.addItem(list_item)
-                    list_widget_to_load.setItemWidget(list_item, item_widget)
+                    self._add_item_to_list(list_widget_to_load, item_data)
             else:
                 list_widget_to_load.addItem("No hay ítems en esta checklist.")
 
@@ -265,55 +285,41 @@ class ChecklistWidget(QWidget):
         
         list_widget_to_load.clear()
         if self.current_checklist_id:
-            checklist = self.manager.get_checklist(self.current_checklist_id)
+            checklist = self.checklist_service.get_checklist(self.current_checklist_id)
             if checklist and checklist.get('items'):
                 for item_data in checklist['items']:
-                    item_widget = self.create_checklist_item_widget(item_data)
-                    list_item = QListWidgetItem()
-                    list_item.setSizeHint(item_widget.sizeHint())
-                    list_widget_to_load.addItem(list_item)
-                    list_widget_to_load.setItemWidget(list_item, item_widget)
+                    self._add_item_to_list(list_widget_to_load, item_data)
             else:
                 list_widget_to_load.addItem("No hay ítems en esta checklist.")
 
     def show_independent_checklist_context_menu(self, position):
         item = self.independent_checklist_list.itemAt(position)
-        if not item:
-            return
-
+        if not item: return
         menu = QMenu()
         edit_action = menu.addAction("Editar nombre")
         delete_action = menu.addAction("Eliminar")
-
         action = menu.exec(self.independent_checklist_list.mapToGlobal(position))
-
-        if action == edit_action:
-            self.edit_independent_checklist_name(item)
-        elif action == delete_action:
-            self.delete_independent_checklist(item)
+        if action == edit_action: self.edit_independent_checklist_name(item)
+        elif action == delete_action: self.delete_independent_checklist(item)
 
     def edit_independent_checklist_name(self, item):
         checklist_id = item.data(Qt.ItemDataRole.UserRole)
         current_name = item.text()
-        
         new_name, ok = QInputDialog.getText(self, "Editar Nombre de Checklist", "Nuevo nombre:", text=current_name)
-        
         if ok and new_name and new_name != current_name:
-            self.manager.update_checklist_name(checklist_id, new_name)
+            self.checklist_service.update_checklist_name(checklist_id, new_name)
             self.load_independent_checklists()
             self.checklist_updated.emit()
 
     def delete_independent_checklist(self, item):
         checklist_id = item.data(Qt.ItemDataRole.UserRole)
         checklist_name = item.text()
-        
         reply = QMessageBox.question(self, 'Confirmar Eliminación', 
                                      f"¿Estás seguro de que quieres eliminar la checklist '{checklist_name}' y todos sus ítems?",
                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
                                      QMessageBox.StandardButton.No)
-        
         if reply == QMessageBox.StandardButton.Yes:
-            self.manager.delete_checklist(checklist_id)
+            self.checklist_service.delete_checklist(checklist_id)
             self.load_independent_checklists()
             self.independent_checklist_items_list.clear()
             self.independent_checklist_label.setText("Selecciona una checklist independiente")
@@ -351,15 +357,15 @@ class ChecklistWidget(QWidget):
 
         layout.addStretch()
 
-        edit_button = QPushButton("\uf044") # Font Awesome edit icon
+        edit_button = QPushButton("\uf044")
         edit_button.setStyleSheet("QPushButton { font-family: \"Font Awesome 6 Free\"; font-size: 12px; padding: 0px; margin: 0px; border: none; }")
-        edit_button.setFixedSize(24, 24) # Keep fixed size for now, adjust if needed
+        edit_button.setFixedSize(24, 24)
         edit_button.clicked.connect(lambda ch, id=item_data['id'], txt=item_data['text'], due=local_dt: self.edit_checklist_item(id, txt, due))
         layout.addWidget(edit_button)
 
-        delete_button = QPushButton("\uf2ed") # Font Awesome trash icon
+        delete_button = QPushButton("\uf2ed")
         delete_button.setStyleSheet("QPushButton { font-family: \"Font Awesome 6 Free\"; font-size: 12px; padding: 0px; margin: 0px; border: none; }")
-        delete_button.setFixedSize(24, 24) # Keep fixed size for now, adjust if needed
+        delete_button.setFixedSize(24, 24)
         delete_button.clicked.connect(lambda ch, id=item_data['id']: self.delete_item(id))
         layout.addWidget(delete_button)
 
@@ -369,7 +375,7 @@ class ChecklistWidget(QWidget):
     def add_independent_checklist(self):
         text, ok = QInputDialog.getText(self, 'Nueva Checklist Independiente', 'Nombre de la checklist:')
         if ok and text:
-            new_id = self.manager.create_checklist(text)
+            new_id = self.checklist_service.create_checklist(text)
             self.load_independent_checklists()
             self.checklist_updated.emit()
             for i in range(self.independent_checklist_list.count()):
@@ -395,29 +401,33 @@ class ChecklistWidget(QWidget):
             text, due_at_qdt = dialog.getItemData()
             if text:
                 due_at_str = time_utils.qdatetime_to_utc_iso(due_at_qdt) if due_at_qdt else None
-                self.manager.add_item_to_checklist(self.current_checklist_id, text, due_at_str)
-                # Reload items in the correct list
+                new_item_id = self.checklist_service.add_item_to_checklist(self.current_checklist_id, text, due_at_str)
+                
+                # Add to UI without full reload
                 current_list_widget = self._get_current_checklist_list_widget()
-                if current_list_widget == self.checklist_items_list:
-                    self.on_kanban_card_selected_and_load(self.kanban_card_list.currentItem(), None)
-                else:
-                    self.on_independent_checklist_selected_and_load(self.independent_checklist_list.currentItem(), None)
+                if current_list_widget:
+                    # This requires a new service method to get a single item's data
+                    new_item_data = self.checklist_service.get_checklist_item(new_item_id)
+                    if new_item_data:
+                        self._add_item_to_list(current_list_widget, new_item_data)
+
                 self.checklist_updated.emit()
 
     def delete_item(self, item_id):
         reply = QMessageBox.question(self, 'Confirmar Eliminación', '¿Estás seguro de que quieres eliminar este item?', QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
-            self.manager.delete_checklist_item(item_id)
             current_list_widget = self._get_current_checklist_list_widget()
-            if current_list_widget == self.checklist_items_list:
-                self.on_kanban_card_selected_and_load(self.kanban_card_list.currentItem(), None)
-            else:
-                self.on_independent_checklist_selected_and_load(self.independent_checklist_list.currentItem(), None)
-            self.checklist_updated.emit()
+            list_item = self._find_list_item(current_list_widget, item_id)
+            
+            if list_item:
+                self.checklist_service.delete_checklist_item(item_id)
+                row = current_list_widget.row(list_item)
+                current_list_widget.takeItem(row)
+                self.checklist_updated.emit()
 
     def toggle_item_checked(self, item_id, state, text_label):
         is_checked = 1 if state == Qt.CheckState.Checked.value else 0
-        self.manager.update_checklist_item(item_id, is_checked=is_checked)
+        self.checklist_service.update_checklist_item(item_id, is_checked=is_checked)
         font = text_label.font()
         font.setStrikeOut(is_checked)
         text_label.setFont(font)
@@ -429,12 +439,18 @@ class ChecklistWidget(QWidget):
             new_text, new_due_date_qdt = dialog.getItemData()
             if new_text:
                 new_due_date_str = time_utils.qdatetime_to_utc_iso(new_due_date_qdt) if new_due_date_qdt else None
-                self.manager.update_checklist_item(item_id, text=new_text, due_at=new_due_date_str)
+                self.checklist_service.update_checklist_item(item_id, text=new_text, due_at=new_due_date_str)
+                
+                # Update UI without full reload
                 current_list_widget = self._get_current_checklist_list_widget()
-                if current_list_widget == self.checklist_items_list:
-                    self.on_kanban_card_selected_and_load(self.kanban_card_list.currentItem(), None)
-                else:
-                    self.on_independent_checklist_selected_and_load(self.independent_checklist_list.currentItem(), None)
+                list_item = self._find_list_item(current_list_widget, item_id)
+                if list_item:
+                    row = current_list_widget.row(list_item)
+                    current_list_widget.takeItem(row)
+                    updated_item_data = self.checklist_service.get_checklist_item(item_id)
+                    if updated_item_data:
+                        self._add_item_to_list(current_list_widget, updated_item_data, row)
+
                 self.checklist_updated.emit()
 
     def refresh_kanban_cards(self):

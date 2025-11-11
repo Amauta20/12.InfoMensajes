@@ -41,7 +41,7 @@ class SettingsWidget(QWidget):
         # Color settings
         self.todo_color_label = QLabel("Color 'Por Hacer':")
         self.todo_color_button = QPushButton()
-        self.todo_color_button.clicked.connect(lambda: self.select_color(self.todo_color_button, "todo_color"))
+        self.todo_color_button.clicked.connect(lambda: self.select_.py
         self.form_layout.addRow(self.todo_color_label, self.todo_color_button)
 
         self.inprogress_color_label = QLabel("Color 'En Progreso':")
@@ -70,7 +70,7 @@ class SettingsWidget(QWidget):
             if setting_key == "todo_color":
                 self.settings_manager.set_todo_color(color.name())
             elif setting_key == "inprogress_color":
-                self.inprogress_manager.set_inprogress_color(color.name())
+                self.settings_manager.set_inprogress_color(color.name())
             elif setting_key == "done_color":
                 self.settings_manager.set_done_color(color.name())
 

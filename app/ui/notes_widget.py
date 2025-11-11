@@ -5,7 +5,7 @@ from app.utils import time_utils
 from app.db.settings_manager import SettingsManager
 from app.db import database
 
-from app.db.notes_manager import NotesManager
+from app.services_layer.notes_service import NotesService
 from app.ui.edit_note_dialog import EditNoteDialog
 
 class NoteInput(QTextEdit):
@@ -22,10 +22,9 @@ class NoteInput(QTextEdit):
         super().keyPressEvent(event)
 
 class NotesWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, notes_service: NotesService, parent=None):
         super().__init__(parent)
-        self.conn = database.get_db_connection()
-        self.manager = NotesManager(self.conn)
+        self.notes_service = notes_service
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(10, 10, 10, 10)
         self.layout.setSpacing(10)
@@ -63,7 +62,7 @@ class NotesWidget(QWidget):
     def add_note_from_input(self):
         content = self.note_input.toPlainText().strip()
         if content:
-            self.manager.create_note(content)
+            self.notes_service.create_note(content)
             self.note_input.clear()
             self.load_notes()
 
@@ -76,7 +75,7 @@ class NotesWidget(QWidget):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             new_content = dialog.get_new_content()
             if new_content and new_content != original_content:
-                self.manager.update_note(note_id, new_content)
+                self.notes_service.update_note(note_id, new_content)
                 self.load_notes()
 
     def show_note_context_menu(self, pos):
@@ -95,12 +94,12 @@ class NotesWidget(QWidget):
             menu.exec(list_widget.mapToGlobal(pos))
 
     def delete_note_from_ui(self, note_id):
-        self.manager.delete_note(note_id)
+        self.notes_service.delete_note(note_id)
         self.load_notes()
 
     def load_notes(self):
         self.notes_list.clear()
-        notes = self.manager.get_all_notes()
+        notes = self.notes_service.get_all_notes()
         for note in notes:
             snippet = note['content'].split('\n')[0] # First line as snippet
             

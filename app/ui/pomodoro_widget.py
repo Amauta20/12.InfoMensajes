@@ -5,9 +5,10 @@ from app.db.settings_manager import SettingsManager
 class PomodoroWidget(QWidget):
     pomodoro_finished = Signal(str)
 
-    def __init__(self, settings_manager_instance, parent=None):
+    def __init__(self, settings_manager_instance, notification_manager, parent=None):
         super().__init__(parent)
-        self.settings_manager = settings_manager_instance # Store instance
+        self.settings_manager = settings_manager_instance
+        self.notification_manager = notification_manager # Store instance
         self.load_settings()
 
         self.current_mode = "Pomodoro"
@@ -74,9 +75,11 @@ class PomodoroWidget(QWidget):
         self.time_label.setText(self.time_left.toString("mm:ss"))
         if self.time_left == QTime(0, 0, 0):
             self.timer.stop()
-            self.pomodoro_finished.emit(self.current_mode)
+            self.notification_manager.show_pomodoro_notification(self.current_mode) # Call notification manager
             self.start_button.setVisible(True)
             self.pause_button.setVisible(False)
+            # The pomodoro_finished signal is no longer needed if the notification is handled directly
+            # self.pomodoro_finished.emit(self.current_mode)
 
     def switch_mode(self, mode):
         self.current_mode = mode

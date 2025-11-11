@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit
 from PyQt6.QtCore import Qt, QSize, QDateTime, pyqtSignal as Signal
 from PyQt6.QtGui import QColor, QFont, QAction
 
-from app.db.kanban_manager import KanbanManager
+from app.services_layer.kanban_service import KanbanService
 from app.db import settings_manager, database
 from app.utils import time_utils, report_utils
 from app.ui.edit_kanban_card_dialog import EditKanbanCardDialog
@@ -13,10 +13,9 @@ from app.ui.gantt_chart_widget import GanttChartWidget
 class KanbanWidget(QWidget):
     kanban_updated = Signal()
 
-    def __init__(self, settings_manager, parent=None):
+    def __init__(self, kanban_service: KanbanService, settings_manager, parent=None):
         super().__init__(parent)
-        self.conn = database.get_db_connection()
-        self.manager = KanbanManager(self.conn)
+        self.kanban_service = kanban_service
         self.settings_manager = settings_manager
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(10, 10, 10, 10)
@@ -39,9 +38,9 @@ class KanbanWidget(QWidget):
 
         self.kanban_columns = {}
         self.kanban_card_inputs = {}
-        self.all_kanban_columns = self.manager.get_all_columns() # Cache columns for context menu
+        self.all_kanban_columns = self.kanban_service.get_all_columns() # Cache columns for context menu
 
-        self.manager.create_default_columns() # Ensure default columns exist
+        self.kanban_service.create_default_columns() # Ensure default columns exist
         self.load_kanban_boards()
 
         self.kanban_layout.addWidget(self.kanban_columns_widget)
@@ -70,7 +69,7 @@ class KanbanWidget(QWidget):
         self.gantt_chart_widget.show()
 
     def generate_kanban_report_ui(self):
-        report_data = self.manager.generate_kanban_report()
+        report_data = self.kanban_service.generate_kanban_report()
         if report_data:
             file_name, _ = QFileDialog.getSaveFileName(self, "Guardar Reporte Kanban", "kanban_report.xlsx", "Excel Files (*.xlsx)")
             if file_name:
@@ -105,7 +104,7 @@ class KanbanWidget(QWidget):
         self.kanban_columns.clear()
         self.kanban_card_inputs.clear()
 
-        columns = self.manager.get_all_columns()
+        columns = self.kanban_service.get_all_columns()
         for column in columns:
             column_widget = QWidget()
             column_layout = QVBoxLayout(column_widget)
@@ -134,7 +133,7 @@ class KanbanWidget(QWidget):
     def load_kanban_cards(self, column_id, column_name):
         card_list = self.kanban_columns[column_id]
         card_list.clear()
-        cards = self.manager.get_cards_by_column(column_id)
+        cards = self.kanban_service.get_cards_by_column(column_id)
         for card in cards:
             assignee_value = card['assignee'] if card['assignee'] else "N/A"
             
@@ -200,7 +199,7 @@ class KanbanWidget(QWidget):
             title, description, assignee, due_date_qdt = dialog.get_card_data()
             if title:
                 due_date_str = due_date_qdt.toUTC().toString(Qt.DateFormat.ISODate) if due_date_qdt else None
-                self.manager.create_card(column_id, title, description, assignee, due_date_str, created_at=time_utils.datetime_from_qdatetime(time_utils.get_current_qdatetime()))
+                self.kanban_service.create_card(column_id, title, description, assignee, due_date_str, created_at=time_utils.datetime_from_qdatetime(time_utils.get_current_qdatetime()))
                 self.load_kanban_boards() # Refresh all boards
                 self.kanban_updated.emit()
 
@@ -239,13 +238,13 @@ class KanbanWidget(QWidget):
             menu.exec(list_widget.mapToGlobal(pos))
 
     def view_kanban_card_details(self, card_id):
-        card_details = self.manager.get_card_details(card_id)
+        card_details = self.kanban_service.get_card_details(card_id)
         if card_details:
             dialog = ViewKanbanCardDetailsDialog(card_details, self)
             dialog.exec()
 
     def move_kanban_card(self, card_id, new_column_id):
-        self.manager.move_card(card_id, new_column_id)
+        self.kanban_service.move_card(card_id, new_column_id)
         self.load_kanban_boards() # Refresh all boards
         self.kanban_updated.emit()
 
@@ -254,7 +253,7 @@ class KanbanWidget(QWidget):
                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
 
         if reply == QMessageBox.StandardButton.Yes:
-            self.manager.delete_card(card_id)
+            self.kanban_service.delete_card(card_id)
             self.load_kanban_boards() # Refresh all boards
             self.kanban_updated.emit()
 
@@ -266,9 +265,9 @@ class KanbanWidget(QWidget):
                 break
 
         if completed_column_id is not None:
-            cards_to_delete = self.manager.get_cards_by_column(completed_column_id)
+            cards_to_delete = self.kanban_service.get_cards_by_column(completed_column_id)
             for card in cards_to_delete:
-                self.manager.delete_card(card['id'])
+                self.kanban_service.delete_card(card['id'])
             self.load_kanban_boards() # Refresh all boards
             self.kanban_updated.emit()
 
@@ -276,7 +275,7 @@ class KanbanWidget(QWidget):
         card_id = item.data(Qt.ItemDataRole.UserRole)
         if card_id is None: return
 
-        card_details = self.manager.get_card_details(card_id)
+        card_details = self.kanban_service.get_card_details(card_id)
         if not card_details: return
 
         dialog = EditKanbanCardDialog(self.settings_manager, card_details['title'], card_details['description'], card_details['assignee'], card_details['due_date'], self)
@@ -288,7 +287,7 @@ class KanbanWidget(QWidget):
                     new_description != card_details['description'] or 
                     new_assignee != card_details['assignee'] or 
                     new_due_date_str != card_details['due_date']):
-                    self.manager.update_card(card_id, new_title, new_description, new_assignee, new_due_date_str)
+                    self.kanban_service.update_card(card_id, new_title, new_description, new_assignee, new_due_date_str)
                     self.load_kanban_boards()
                     self.kanban_updated.emit()
 

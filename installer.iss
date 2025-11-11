@@ -2,13 +2,10 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "InfoMensajero"
-#define MyAppVersion "1.2"
+#define MyAppVersion "1.4"
 #define MyAppPublisher "CIBERTEC.ORG"
 #define MyAppURL "https://www.cibertec.org/"
 #define MyAppExeName "InfoMensajero.exe"
-#define MyAppAssocName MyAppName + ""
-#define MyAppAssocExt ".myp"
-#define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
@@ -16,31 +13,61 @@
 AppId={{F6CAE84B-D6C8-44EF-A777-DD2DD89FF24E}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-;AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
-; "ArchitecturesAllowed=x64compatible" specifies that Setup cannot run
-; on anything but x64 and Windows 11 on Arm.
 ArchitecturesAllowed=x64compatible
-; "ArchitecturesInstallIn64BitMode=x64compatible" requests that the
-; install be done in "64-bit mode" on x64 or Windows 11 on Arm,
-; meaning it should use the native 64-bit Program Files directory and
-; the 64-bit view of the registry.
 ArchitecturesInstallIn64BitMode=x64compatible
 ChangesAssociations=yes
 DisableProgramGroupPage=yes
-LicenseFile=C:\Python\12.InfoMensajes-Power\LICENSE
+LicenseFile=LICENSE
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
-OutputDir=C:\Python\12.InfoMensajes-Power\Output
+OutputDir=Output
 OutputBaseFilename=InfoMensajero
-SetupIconFile=C:\Python\12.InfoMensajes-Power\assets\icon.ico
+SetupIconFile=assets\icon.ico
 SolidCompression=yes
 WizardStyle=modern
+WizardImageFile=assets\ECF0F1.png
+WizardSmallImageFile=assets\ECF0F1.png
+
+[Code]
+function GetExistingDir(): String;
+var
+  existingPath: String;
+begin
+  Result := '';
+  if RegQueryStringValue(HKEY_LOCAL_MACHINE, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#SetupSetting("AppId")}_is1', 'Inno Setup: App Path', existingPath) then
+  begin
+    Result := existingPath;
+  end
+  else if RegQueryStringValue(HKEY_CURRENT_USER, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#SetupSetting("AppId")}_is1', 'Inno Setup: App Path', existingPath) then
+  begin
+    Result := existingPath;
+  end;
+end;
+
+function IsUpgrade(): Boolean;
+begin
+  Result := (GetExistingDir() <> '');
+end;
+
+function InitializeSetup(): Boolean;
+var
+  ExistingPath: String;
+begin
+  // Check if we are upgrading
+  if IsUpgrade() then
+  begin
+    // Get the existing installation path
+    ExistingPath := GetExistingDir();
+    MsgBox('Se ha detectado una versión anterior de ' + '{#MyAppName}' + ' en ' + ExistingPath + '.'#13#10#13#10'El programa de instalación la actualizará a la versión ' + '{#MyAppVersion}' + '.', mbInformation, MB_OK);
+  end;
+  Result := True;
+end;
 
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
@@ -49,19 +76,10 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Python\12.InfoMensajes-Power\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Python\12.InfoMensajes-Power\dist\InfoMensajero.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Python\12.InfoMensajes-Power\assets\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Python\12.InfoMensajes-Power\assets\ECF0F1.png"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Python\12.InfoMensajes-Power\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Python\12.InfoMensajes-Power\README.md"; DestDir: "{app}"; Flags: ignoreversion
-; NOTE: Don't use "Flags: ignoreversion" on any shared system files
-
-[Registry]
-Root: HKA; Subkey: "Software\Classes\{#MyAppAssocExt}\OpenWithProgids"; ValueType: string; ValueName: "{#MyAppAssocKey}"; ValueData: ""; Flags: uninsdeletevalue
-Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}"; ValueType: string; ValueName: ""; ValueData: "{#MyAppAssocName}"; Flags: uninsdeletekey
-Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},0"
-Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
+Source: "dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "assets\*"; DestDir: "{app}\assets"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
@@ -69,4 +87,3 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
-

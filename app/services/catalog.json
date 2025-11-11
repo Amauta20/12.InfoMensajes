@@ -2,56 +2,67 @@
     {
         "name": "WhatsApp",
         "url": "https://web.whatsapp.com/",
-        "icon": "whatsapp.png"
+        "icon": "whatsapp.png",
+        "unread_script": "(function() { if (/\\(\\d+\\)/.test(document.title)) return true; var unread = document.querySelector('._1gL0j, [aria-label*=\"unread\"], .l7jjieqr, .p357zi0d'); return unread !== null; })();"
     },
     {
         "name": "Telegram",
         "url": "https://web.telegram.org/k/",
-        "icon": "telegram.png"
+        "icon": "telegram.png",
+        "unread_script": "(function() { if (/\\(\\d+\\)/.test(document.title)) return true; return false; })();"
     },
     {
         "name": "Slack",
         "url": "https://app.slack.com/",
-        "icon": "slack.png"
+        "icon": "slack.png",
+        "unread_script": "(function() { if (/\\(\\d+\\)/.test(document.title)) return true; var unread = document.querySelector('[class*=\"NewMessages\"], [class*=\"unread\"]'); return unread !== null; })();"
     },
     {
         "name": "Gmail",
         "url": "https://mail.google.com/",
-        "icon": "gmail.png"
+        "icon": "gmail.png",
+        "unread_script": "(function() { if (/\\(\\d+\\)/.test(document.title)) return true; return false; })();"
     },
     {
         "name": "Outlook",
         "url": "https://outlook.live.com/",
-        "icon": "outlook.png"
+        "icon": "outlook.png",
+        "unread_script": "(function() { if (/\\(\\d+\\)/.test(document.title)) return true; var unread = document.querySelector('[aria-label*=\"unread\"], [class*=\"unread\"]'); return unread !== null; })();"
     },
     {
         "name": "LinkedIn",
         "url": "https://www.linkedin.com/feed/",
-        "icon": "linkedin.png"
+        "icon": "linkedin.png",
+        "unread_script": "(function() { if (/\\(\\d+\\)/.test(document.title)) return true; var unread = document.querySelector('.msg-overlay-bubble--is-active, .notification-badge--show, .feed-new-updates-pill'); return unread !== null; })();"
     },
     {
         "name": "Teams",
         "url": "https://teams.microsoft.com/",
-        "icon": "teams.png"
+        "icon": "teams.png",
+        "unread_script": "(function() { if (/\\(\\d+\\)/.test(document.title)) return true; var unread = document.querySelector('.activity-badge, [data-tid*=\"unseen\"], [class*=\"NewActivity\"], [class*=\"unread\"]'); return unread !== null; })();"
     },
     {
         "name": "Discord",
         "url": "https://discord.com/app",
-        "icon": "discord.png"
+        "icon": "discord.png",
+        "unread_script": "(function() { if (/\\(\\d+\\)/.test(document.title)) return true; var unread = document.querySelector('[class*=\"badge\"], [class*=\"dot\"], [aria-label*=\"unread\"]'); return unread !== null; })();"
     },
     {
         "name": "Messenger",
         "url": "https://www.messenger.com/",
-        "icon": "messenger.png"
+        "icon": "messenger.png",
+        "unread_script": "(function() { if (/\\(\\d+\\)/.test(document.title)) return true; var unread = document.querySelector('[aria-label*=\"unread\"], [data-visualcompletion=\"ignore-dynamic\"]:not(:empty)'); return unread !== null; })();"
     },
     {
         "name": "X (Twitter)",
         "url": "https://twitter.com/home",
-        "icon": "twitter.png"
+        "icon": "twitter.png",
+        "unread_script": "(function() { if (/\\(\\d+\\)/.test(document.title)) return true; return false; })();"
     },
     {
         "name": "Instagram",
         "url": "https://www.instagram.com/",
-        "icon": "instagram.png"
+        "icon": "instagram.png",
+        "unread_script": "(function() { if (/\\(\\d+\\)/.test(document.title)) return true; return false; })();"
     }
 ]

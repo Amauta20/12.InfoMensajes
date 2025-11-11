@@ -29,7 +29,8 @@ def create_schema(existing_conn=None):
             icon TEXT,
             profile_path TEXT NOT NULL UNIQUE,
             is_active BOOLEAN DEFAULT 1,
-            is_internal BOOLEAN DEFAULT 0
+            is_internal BOOLEAN DEFAULT 0,
+            unread_script TEXT
         );
         """)
 
@@ -38,6 +39,8 @@ def create_schema(existing_conn=None):
         columns = [col[1] for col in cursor.fetchall()]
         if 'is_internal' not in columns:
             cursor.execute("ALTER TABLE services ADD COLUMN is_internal BOOLEAN DEFAULT 0;")
+        if 'unread_script' not in columns:
+            cursor.execute("ALTER TABLE services ADD COLUMN unread_script TEXT;")
 
         # Table for notes
         cursor.execute("""
@@ -210,6 +213,14 @@ def create_schema(existing_conn=None):
             url TEXT NOT NULL UNIQUE
         );
         """)
+
+        # --- Indexes for Performance ---
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_kanban_cards_column_id ON kanban_cards(column_id);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklists_kanban_card_id ON checklists(kanban_card_id);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_checklist_id ON checklist_items(checklist_id);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_usage_metrics_service_id ON usage_metrics(service_id);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_reminders_due_at ON reminders(due_at);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_checklist_items_due_at ON checklist_items(due_at);")
 
         conn.commit()
     finally:

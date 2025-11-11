@@ -37,12 +37,13 @@ QPushButton:pressed {
 }
 
 QPushButton.unread {
-    background-color: #e74c3c; /* A shade of red/orange */
+    background-color: #3498db; /* A bright, noticeable blue */
     font-weight: bold;
+    border: 1px solid #2980b9;
 }
 
 QPushButton.unread:hover {
-    background-color: #c0392b;
+    background-color: #2980b9; /* A slightly darker blue for hover */
 }
 
 QLabel {

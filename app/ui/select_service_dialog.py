@@ -4,7 +4,7 @@ from app.services import service_manager
 
 class SelectServiceDialog(QDialog):
     # Signals to indicate what action was chosen
-    catalog_service_selected = pyqtSignal(str, str, str) # name, url, icon
+    catalog_service_selected = pyqtSignal(str, str, str, object) # name, url, icon, unread_script
     custom_service_requested = pyqtSignal() # No args
 
     def __init__(self, parent=None):
@@ -54,7 +54,9 @@ class SelectServiceDialog(QDialog):
         selected_item = self.catalog_list.currentItem()
         if selected_item:
             service_data = selected_item.data(Qt.ItemDataRole.UserRole)
-            self.catalog_service_selected.emit(service_data['name'], service_data['url'], service_data['icon'])
+            # Use .get() for safety, providing None if the key doesn't exist
+            unread_script = service_data.get('unread_script')
+            self.catalog_service_selected.emit(service_data['name'], service_data['url'], service_data['icon'], unread_script)
             self.accept()
         else:
             # Optionally show a warning if nothing is selected

@@ -28,7 +28,7 @@ class ServiceManager:
         services = self.conn.execute("SELECT * FROM services WHERE is_active = 1 AND is_internal = 0 ORDER BY name").fetchall()
         return services
 
-    def add_service(self, name, url, icon=None, is_internal=False):
+    def add_service(self, name, url, icon=None, is_internal=False, unread_script=None):
         """Adds a new service to the database."""
         cursor = self.conn.cursor()
 
@@ -42,8 +42,8 @@ class ServiceManager:
 
         try:
             cursor.execute(
-                "INSERT INTO services (name, url, icon, profile_path, is_internal) VALUES (?, ?, ?, ?, ?)",
-                (name, url, icon, profile_path, is_internal)
+                "INSERT INTO services (name, url, icon, profile_path, is_internal, unread_script) VALUES (?, ?, ?, ?, ?, ?)",
+                (name, url, icon, profile_path, is_internal, unread_script)
             )
             self.conn.commit()
             service_id = cursor.lastrowid
@@ -58,12 +58,12 @@ class ServiceManager:
 
     def get_service_by_name(self, name):
         """Retrieves full details of a service by its name."""
-        service = self.conn.execute("SELECT id, name, url, icon, profile_path, is_internal FROM services WHERE name = ?", (name,)).fetchone()
+        service = self.conn.execute("SELECT id, name, url, icon, profile_path, is_internal, unread_script FROM services WHERE name = ?", (name,)).fetchone()
         return service
 
     def get_service_by_profile_path(self, profile_path):
         """Retrieves full details of a service by its profile path."""
-        service = self.conn.execute("SELECT id, name, url, icon, profile_path, is_internal FROM services WHERE profile_path = ?", (profile_path,)).fetchone()
+        service = self.conn.execute("SELECT id, name, url, icon, profile_path, is_internal, unread_script FROM services WHERE profile_path = ?", (profile_path,)).fetchone()
         return service
 
     def delete_service(self, service_id):
@@ -118,5 +118,5 @@ class ServiceManager:
 
     def get_service_by_id(self, service_id):
         """Retrieves full details of a service by its ID."""
-        service = self.conn.execute("SELECT id, name, url, icon, profile_path FROM services WHERE id = ?", (service_id,)).fetchone()
+        service = self.conn.execute("SELECT id, name, url, icon, profile_path, is_internal, unread_script FROM services WHERE id = ?", (service_id,)).fetchone()
         return service

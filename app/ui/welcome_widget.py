@@ -15,9 +15,9 @@ class WelcomeWidget(QWidget):
     show_checklist_requested = Signal()
     show_reminders_requested = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, conn, parent=None):
         super().__init__(parent)
-        self.conn = database.get_db_connection()
+        self.conn = conn
         self.kanban_manager = KanbanManager(self.conn)
         self.checklist_manager = ChecklistManager(self.conn)
         self.reminders_manager = RemindersManager(self.conn)

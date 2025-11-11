@@ -1,34 +1,29 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QLineEdit, QDateEdit, QTimeEdit, QHBoxLayout, QDialogButtonBox, QMessageBox
-from PyQt6.QtCore import QDateTime, QDate, QTime
+from PyQt6.QtWidgets import QFormLayout, QLineEdit, QDateEdit, QTimeEdit, QHBoxLayout, QMessageBox
+from PyQt6.QtCore import QDateTime
 from app.utils import time_utils
+from app.ui.base_dialog import BaseDialog
 
-class AddReminderDialog(QDialog):
+class AddReminderDialog(BaseDialog):
     def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Nuevo Recordatorio")
-        self.layout = QVBoxLayout(self)
+        super().__init__("Nuevo Recordatorio", parent)
 
-        self.form_layout = QFormLayout()
+        form_layout = QFormLayout()
         self.reminder_text_input = QLineEdit()
-        self.form_layout.addRow("Texto del recordatorio:", self.reminder_text_input)
+        form_layout.addRow("Texto del recordatorio:", self.reminder_text_input)
 
         self.due_date_edit = QDateEdit()
         self.due_date_edit.setCalendarPopup(True)
-        self.due_date_edit.setDate(time_utils.get_current_qdatetime().date())
+        self.due_date_edit.setDateTime(time_utils.get_current_qdatetime())
         self.due_time_edit = QTimeEdit()
-        self.due_time_edit.setTime(time_utils.get_current_qdatetime().time())
+        self.due_time_edit.setDateTime(time_utils.get_current_qdatetime())
 
         due_layout = QHBoxLayout()
         due_layout.addWidget(self.due_date_edit)
         due_layout.addWidget(self.due_time_edit)
-        self.form_layout.addRow("Fecha y Hora de Vencimiento:", due_layout)
+        form_layout.addRow("Fecha y Hora de Vencimiento:", due_layout)
 
-        self.layout.addLayout(self.form_layout)
-
-        self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        self.buttons.accepted.connect(self.validate_and_accept)
-        self.buttons.rejected.connect(self.reject)
-        self.layout.addWidget(self.buttons)
+        self.add_content(form_layout)
+        self.reminder_text_input.setFocus()
 
     def validate_and_accept(self):
         text = self.reminder_text_input.text().strip()

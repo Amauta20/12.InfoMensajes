@@ -85,8 +85,8 @@ class Sidebar(QWidget):
         dialog.custom_service_requested.connect(self._add_custom_service)
         dialog.exec()
 
-    def _add_catalog_service(self, name, url, icon):
-        self.service_manager.add_service(name, url, icon)
+    def _add_catalog_service(self, name, url, icon, unread_script):
+        self.service_manager.add_service(name, url, icon, unread_script=unread_script)
         self.load_services() # Refresh the service list
 
     def _add_custom_service(self):

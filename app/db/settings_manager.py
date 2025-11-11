@@ -1,3 +1,5 @@
+import hashlib
+
 class SettingsManager:
     _instance = None
 
@@ -164,3 +166,38 @@ class SettingsManager:
     def set_done_color(self, color):
         """Saves the color for 'Done' status."""
         self.set_setting("done_color", color)
+
+    # --- Application Lock Settings ---
+    def set_app_lock_password_hash(self, password_hash: str):
+        """Saves the SHA256 hash of the application lock password."""
+        self.set_setting("app_lock_password_hash", password_hash)
+
+    def get_app_lock_password_hash(self) -> str | None:
+        """Retrieves the SHA256 hash of the application lock password."""
+        return self.get_setting("app_lock_password_hash")
+
+    def set_app_lock_enabled(self, enabled: bool):
+        """Saves whether the application lock is enabled."""
+        self.set_setting("app_lock_enabled", str(enabled))
+
+    def get_app_lock_enabled(self) -> bool:
+        """Retrieves whether the application lock is enabled."""
+        enabled_str = self.get_setting("app_lock_enabled")
+        return enabled_str == "True" if enabled_str is not None else False
+
+    # --- AI Provider Settings ---
+    def get_ai_provider(self) -> str | None:
+        """Retrieves the name of the configured AI provider."""
+        return self.get_setting("ai_provider")
+
+    def set_ai_provider(self, provider_name: str):
+        """Saves the name of the configured AI provider."""
+        self.set_setting("ai_provider", provider_name)
+
+    def get_ai_model(self) -> str | None:
+        """Retrieves the name of the configured AI model."""
+        return self.get_setting("ai_model")
+
+    def set_ai_model(self, model_name: str):
+        """Saves the name of the configured AI model."""
+        self.set_setting("ai_model", model_name)

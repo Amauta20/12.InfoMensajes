@@ -91,6 +91,21 @@ class Vault:
         rows = cursor.fetchall()
         return [row['id'] for row in rows]
 
+    def get_all_secrets_for_reencryption(self) -> list[str]:
+        """Retrieves all secret IDs from the database, including internal ones."""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT id FROM credentials ORDER BY id")
+        rows = cursor.fetchall()
+        return [row['id'] for row in rows]
+
+    def change_passphrase(self, old_passphrase: str, new_passphrase: str):
+        """Re-encrypts all secrets with a new passphrase."""
+        secret_ids = self.get_all_secrets_for_reencryption()
+        for secret_id in secret_ids:
+            plaintext = self.get_secret(secret_id, old_passphrase)
+            if plaintext is not None:
+                self.save_secret(secret_id, plaintext, new_passphrase)
+
     def delete_secret(self, secret_id: str):
         """Deletes a secret from the database."""
         cursor = self.conn.cursor()

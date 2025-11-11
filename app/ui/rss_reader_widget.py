@@ -6,9 +6,9 @@ from app.db import database
 from app.ui.rss_article_item_widget import RssArticleItemWidget
 
 class RssReaderWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, conn, parent=None):
         super().__init__(parent)
-        self.conn = database.get_db_connection()
+        self.conn = conn
         self.manager = RssManager(self.conn)
         self.current_feed_url = None
 
