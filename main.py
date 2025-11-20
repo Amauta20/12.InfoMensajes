@@ -2,36 +2,28 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QMessageBox
 from PyQt6.QtCore import QStandardPaths
 from app.ui.main_window import MainWindow
-from app.db.database import create_schema, get_db_connection
-from app.search.search_manager import SearchManager
-from app.metrics.metrics_manager import MetricsManager
-from app.db.settings_manager import SettingsManager
-from app.db.notes_manager import NotesManager
-from app.db.kanban_manager import KanbanManager
-from app.security.vault_manager import VaultManager
-from app.services.service_manager import ServiceManager
-import datetime
-from app.security.vault import Vault
-from app.security.app_security_manager import AppSecurityManager
-from app.ui.styles import dark_theme_stylesheet
+from app.db.database import create_schema
+from app.core.di_container import DIContainer
+from app.core.error_handler import AppErrorHandler
+
+import logging, threading
 
 # Workaround for QtWebEngine GPU issues
-os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-gpu --disable-software-rasterizer --disable-gpu-compositing --disable-gpu-rasterization --no-sandbox"
+os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-gpu --disable-software-rasterizer --disable-gpu-compositing --disable-gpu-rasterization --no-sandbox --use-angle=swiftshader"
 os.environ["QT_QUICK_BACKEND"] = "software"
 os.environ["QTWEBENGINE_CHROMIUM_ARGUMENTS"] = "--use-angle=d3d11"
 os.environ["QT_OPENGL"] = "software"
-
-import logging
 
 def update_service_scripts(conn):
     """
     Updates the unread_script for existing services in the database
     with the latest scripts from the catalog.json file.
     """
-    print("Checking for service script updates...")
+    logging.info("Checking for service script updates...")
+    from app.services.service_manager import ServiceManager
     service_manager = ServiceManager(conn)
     catalog_services = service_manager.load_catalog()
     catalog_scripts = {service['name']: service.get('unread_script') for service in catalog_services}
@@ -47,19 +39,15 @@ def update_service_scripts(conn):
             new_script = catalog_scripts[base_service_name]
             # Only update if the script is different
             if service['unread_script'] != new_script:
-                print(f"Updating script for '{service_name}'...")
+                logging.info(f"Updating script for '{service_name}'...")
                 cursor = conn.cursor()
                 cursor.execute("UPDATE services SET unread_script = ? WHERE id = ?", (new_script, service['id']))
                 conn.commit()
 
 def main():
-    # # DEPRECATED: The automatic deletion of 'database.db' has been disabled to prevent data loss.
-    # old_db_path = os.path.join(os.getcwd(), "database.db")
-    # if os.path.exists(old_db_path):
-    #     os.remove(old_db_path)
-
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-
+    # Initialize Error Handler and Logging first
+    error_handler = AppErrorHandler()
+    
     # Determine database path dynamically
     if getattr(sys, 'frozen', False):
         # Running in a bundled executable (e.g., PyInstaller)
@@ -74,63 +62,54 @@ def main():
         # Running in development mode
         db_path = os.path.join(os.getcwd(), "x", "database.db") # Use the project root for dev DB
 
-    print(f"Checking for database at: {db_path}")
+    logging.info(f"Checking for database at: {db_path}")
 
-    # Create a single connection here
-    conn = get_db_connection(db_path)
-
+    # Initialize DI Container
+    container = DIContainer.initialize(db_path)
+    
     # Ensure the database schema is created on startup
-    create_schema(conn)
+    create_schema(container.conn)
 
-    # Update service scripts from catalog
-    update_service_scripts(conn)
-
-    # Initialize SettingsManager singleton
-    SettingsManager.initialize(conn)
-
-    # Initialize metrics manager after schema is created
-    global_metrics_manager = MetricsManager.get_instance(conn)
-
-    # Instantiate SearchManager
-    search_manager_instance = SearchManager(conn)
-    # FTS indexes are now updated automatically by database triggers, so manual rebuild is removed.
-
-    # Instantiate VaultManager
-    vault_manager_instance = VaultManager(conn)
-
-    # Initialize AIManager
-    from app.ai.ai_manager import AIManager
-    AIManager.initialize(SettingsManager.get_instance(), vault_manager_instance)
-
-    # Initialize AppSecurityManager
-    app_security_manager = AppSecurityManager(SettingsManager.get_instance())
+    # Update service scripts from catalog in background thread
+    update_thread = threading.Thread(target=update_service_scripts, args=(container.conn,), daemon=True)
+    update_thread.start()
 
     app = QApplication(sys.argv)
-    app.setStyleSheet(dark_theme_stylesheet)
+    
+    # Apply the saved theme (or default to dark)
+    try:
+        current_theme = container.theme_manager.get_current_theme()
+        container.theme_manager.apply_theme(current_theme, app)
+    except Exception as e:
+        logging.error(f"Failed to apply theme: {e}")
+        # Fallback if theme file is missing, though ThemeManager handles defaults
+
 
     # --- Show Application Lock Screen ---
     from app.ui.lock_screen import LockScreen
     from PyQt6.QtWidgets import QDialog
 
+    app_security_manager = container.app_security_manager
+
     if app_security_manager.is_lock_enabled():
         lock_screen = None
         if not app_security_manager.has_lock_password():
             # If lock is enabled but no password is set, force user to set one
-            QMessageBox.information(lock_screen, "Configuración de Bloqueo", "El bloqueo de la aplicación está activado pero no tienes una contraseña establecida. Por favor, establece una ahora.")
+            QMessageBox.information(None, "Configuración de Bloqueo", "El bloqueo de la aplicación está activado pero no tienes una contraseña establecida. Por favor, establece una ahora.")
             lock_screen = LockScreen(app_security_manager, is_setting_password=True)
         else:
             # Otherwise, just ask for the password to unlock
             lock_screen = LockScreen(app_security_manager)
 
         if lock_screen.exec() != QDialog.DialogCode.Accepted:
-            conn.close()
+            container.close()
             sys.exit(0) # User quit or failed to unlock
         
     # --- If unlocked, show main window ---
-    window = MainWindow(conn, global_metrics_manager, vault_manager_instance) # Pass instances
+    window = MainWindow(container) # Pass container instance
     window.show()
     exit_code = app.exec()
-    conn.close() # Close connection when app exits
+    container.close() # Close connection when app exits
     sys.exit(exit_code)
 
 if __name__ == "__main__":

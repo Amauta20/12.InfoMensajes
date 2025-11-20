@@ -2,10 +2,12 @@ from app.db.settings_manager import SettingsManager
 from app.security.vault_manager import VaultManager
 from app.ai.base_ai_provider import BaseAIProvider
 from app.ai.openai_provider import OpenAIProvider
+from app.ai.local_ai_provider import LocalAIProvider
 
 # A mapping of provider names to their classes
 SUPPORTED_PROVIDERS = {
     OpenAIProvider.get_provider_name(): OpenAIProvider,
+    LocalAIProvider.get_provider_name(): LocalAIProvider,
 }
 
 class AIManager:

@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox, QLayout, QWidget
 
 class BaseDialog(QDialog):
     """
@@ -27,10 +27,12 @@ class BaseDialog(QDialog):
         """
         Adds a layout or a widget to the content area of the dialog.
         """
-        if isinstance(layout_or_widget, QDialog.layout.__class__):
+        if isinstance(layout_or_widget, QLayout):
             self.content_layout.addLayout(layout_or_widget)
-        else:
+        elif isinstance(layout_or_widget, QWidget):
             self.content_layout.addWidget(layout_or_widget)
+        else:
+            raise TypeError(f"Argument must be a QLayout or QWidget, not {type(layout_or_widget).__name__}")
 
     def validate_and_accept(self):
         """

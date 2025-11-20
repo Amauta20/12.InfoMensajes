@@ -1,0 +1,24 @@
+C:\Users\SChunga\AppData\Local\Programs\Python\Python313\Lib\site-packages\pygame\pkgdata.py:25: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import resource_stream, resource_exists
+Traceback (most recent call last):
+  File "C:\Python\12.InfoMensajes-Power\main.py", line 114, in <module>
+    main()
+    ~~~~^^
+  File "C:\Python\12.InfoMensajes-Power\main.py", line 66, in main
+    container = DIContainer.initialize(db_path)
+  File "C:\Python\12.InfoMensajes-Power\app\core\di_container.py", line 58, in initialize
+    cls._instance = cls(db_path)
+                    ~~~^^^^^^^^^
+  File "C:\Python\12.InfoMensajes-Power\app\core\di_container.py", line 53, in __init__
+    self._initialize()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Python\12.InfoMensajes-Power\app\core\di_container.py", line 80, in _initialize
+    self.theme_manager = ThemeManager(self.settings_manager)
+                         ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\12.InfoMensajes-Power\app\ui\theme_manager.py", line 25, in __init__
+    self.current_theme = self._load_saved_theme()
+                         ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python\12.InfoMensajes-Power\app\ui\theme_manager.py", line 33, in _load_saved_theme
+    return self.settings_manager.get_setting("theme", self.DARK_THEME)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: SettingsManager.get_setting() takes 2 positional arguments but 3 were given

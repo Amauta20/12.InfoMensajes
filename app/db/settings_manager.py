@@ -20,10 +20,11 @@ class SettingsManager:
         self.conn = conn
         self._settings_cache = {} # Internal cache
 
-    def get_setting(self, key):
+    def get_setting(self, key, default=None):
         """Retrieves a setting from the database or cache."""
         if key in self._settings_cache:
-            return self._settings_cache[key]
+            val = self._settings_cache[key]
+            return val if val is not None else default
 
         cursor = self.conn.cursor()
         cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
@@ -31,7 +32,7 @@ class SettingsManager:
         
         value = row['value'] if row else None
         self._settings_cache[key] = value # Cache the retrieved value
-        return value
+        return value if value is not None else default
 
     def set_setting(self, key, value):
         """Saves a setting to the database and updates the cache."""

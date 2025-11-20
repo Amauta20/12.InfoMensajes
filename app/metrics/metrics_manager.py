@@ -88,3 +88,45 @@ class MetricsManager:
                 (service_id, milliseconds, today_str)
             )
         self.conn.commit()
+
+    def get_usage_report(self, day_str: str = None):
+        """
+        Retrieves usage metrics for a specific day.
+        If day_str is None, defaults to today (YYYY-MM-DD).
+        Returns a list of dicts: [{'service_name': str, 'milliseconds': int}, ...]
+        """
+        if day_str is None:
+            day_str = datetime.date.today().isoformat()
+
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT s.name, m.milliseconds
+            FROM usage_metrics m
+            JOIN services s ON m.service_id = s.id
+            WHERE m.day = ?
+            ORDER BY m.milliseconds DESC
+        """, (day_str,))
+        
+        rows = cursor.fetchall()
+        return [{'service_name': row[0], 'milliseconds': row[1]} for row in rows]
+
+    def get_weekly_usage(self):
+        """
+        Retrieves usage metrics for the last 7 days.
+        Returns a dict mapping date string to total milliseconds.
+        """
+        today = datetime.date.today()
+        start_date = today - datetime.timedelta(days=6)
+        start_date_str = start_date.isoformat()
+        
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT day, SUM(milliseconds)
+            FROM usage_metrics
+            WHERE day >= ?
+            GROUP BY day
+            ORDER BY day ASC
+        """, (start_date_str,))
+        
+        rows = cursor.fetchall()
+        return {row[0]: row[1] for row in rows}

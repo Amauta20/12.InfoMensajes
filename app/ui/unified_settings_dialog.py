@@ -1,142 +1,147 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QDialogButtonBox, QColorDialog, QCheckBox, QLineEdit
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QSpinBox, 
+                             QPushButton, QFormLayout, QMessageBox, QDialogButtonBox, QColorDialog, 
+                             QCheckBox, QLineEdit, QTabWidget, QWidget)
 from PyQt6.QtGui import QColor
 from PyQt6.QtCore import Qt
 from app.db.settings_manager import SettingsManager
 from app.security.vault_manager import VaultManager
 from app.security.app_security_manager import AppSecurityManager
 from app.ui.change_password_dialog import ChangePasswordDialog
-from app.ui.lock_screen import LockScreen # Reusing LockScreen for app lock
+from app.ui.lock_screen import LockScreen
+from app.ui.rules_editor import RulesEditor
+from app.ui.templates_widget import TemplatesWidget
 from zoneinfo import available_timezones
 
 class UnifiedSettingsDialog(QDialog):
-    def __init__(self, settings_manager_instance, parent=None):
+    def __init__(self, settings_manager_instance, rules_manager, templates_manager, parent=None):
         super().__init__(parent)
         self.settings_manager = settings_manager_instance
+        self.rules_manager = rules_manager
+        self.templates_manager = templates_manager
         self.db_connection = self.settings_manager.conn
-        self.app_security_manager = AppSecurityManager(self.settings_manager) # Instantiate AppSecurityManager
-        self.vault_manager = VaultManager(self.db_connection) # Instantiate VaultManager
-        self.setWindowTitle("Configuración General")
+        self.app_security_manager = AppSecurityManager(self.settings_manager)
+        self.vault_manager = VaultManager(self.db_connection)
+        
+        self.setWindowTitle("Configuración y Automatización")
+        self.setMinimumSize(800, 600)
         self.layout = QVBoxLayout(self)
 
+        self.tabs = QTabWidget()
+        self.layout.addWidget(self.tabs)
+
+        # --- Tab 1: General Settings ---
+        self.general_tab = QWidget()
+        self.general_layout = QVBoxLayout(self.general_tab)
+        self.form_layout = QFormLayout()
+        
         self.todo_color = None
         self.inprogress_color = None
         self.done_color = None
 
-        self.form_layout = QFormLayout()
-
-        # Timezone Setting
+        # Timezone
         self.timezone_label = QLabel("Zona Horaria:")
         self.timezone_combo = QComboBox()
         self.timezone_combo.addItems(sorted(list(available_timezones())))
         self.form_layout.addRow(self.timezone_label, self.timezone_combo)
 
-        # Datetime Format Setting
+        # Datetime Format
         self.datetime_format_label = QLabel("Formato de Fecha y Hora:")
         self.datetime_format_combo = QComboBox()
         self.datetime_format_combo.addItems([
-            "%Y-%m-%d %H:%M:%S", # 2023-01-15 14:30:00
-            "%d/%m/%Y %H:%M:%S", # 15/01/2023 14:30:00
-            "%m/%d/%Y %I:%M:%S %p", # 01/15/2023 02:30:00 PM
-            "%Y-%m-%d %H:%M",   # 2023-01-15 14:30
-            "%d/%m/%Y %H:%M",   # 15/01/2023 14:30
-            "%m/%d/%Y %I:%M %p"    # 01/15/2023 02:30 PM
+            "%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S", "%m/%d/%Y %I:%M:%S %p",
+            "%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M", "%m/%d/%Y %I:%M %p"
         ])
         self.form_layout.addRow(self.datetime_format_label, self.datetime_format_combo)
 
-        # Pre-notification Offset Settings
-        self.pre_notification_days_label = QLabel("Pre-notificación (días antes):")
+        # Pre-notification
         self.pre_notification_days_spin = QSpinBox()
         self.pre_notification_days_spin.setRange(0, 30)
-        self.form_layout.addRow(self.pre_notification_days_label, self.pre_notification_days_spin)
+        self.form_layout.addRow("Pre-notificación (días):", self.pre_notification_days_spin)
 
-        self.pre_notification_hours_label = QLabel("Pre-notificación (horas antes):")
         self.pre_notification_hours_spin = QSpinBox()
         self.pre_notification_hours_spin.setRange(0, 23)
-        self.form_layout.addRow(self.pre_notification_hours_label, self.pre_notification_hours_spin)
+        self.form_layout.addRow("Pre-notificación (horas):", self.pre_notification_hours_spin)
 
-        self.pre_notification_minutes_label = QLabel("Pre-notificación (minutos antes):")
         self.pre_notification_minutes_spin = QSpinBox()
         self.pre_notification_minutes_spin.setRange(0, 59)
-        self.form_layout.addRow(self.pre_notification_minutes_label, self.pre_notification_minutes_spin)
+        self.form_layout.addRow("Pre-notificación (minutos):", self.pre_notification_minutes_spin)
 
-        # Pomodoro duration
-        self.pomodoro_label = QLabel("Pomodoro (minutos):")
+        # Pomodoro
         self.pomodoro_spinbox = QSpinBox()
         self.pomodoro_spinbox.setRange(1, 120)
-        self.form_layout.addRow(self.pomodoro_label, self.pomodoro_spinbox)
+        self.form_layout.addRow("Pomodoro (min):", self.pomodoro_spinbox)
 
-        # Short break duration
-        self.short_break_label = QLabel("Descanso Corto (minutos):")
         self.short_break_spinbox = QSpinBox()
         self.short_break_spinbox.setRange(1, 30)
-        self.form_layout.addRow(self.short_break_label, self.short_break_spinbox)
+        self.form_layout.addRow("Descanso Corto (min):", self.short_break_spinbox)
 
-        # Long break duration
-        self.long_break_label = QLabel("Descanso Largo (minutos):")
         self.long_break_spinbox = QSpinBox()
         self.long_break_spinbox.setRange(1, 60)
-        self.form_layout.addRow(self.long_break_label, self.long_break_spinbox)
+        self.form_layout.addRow("Descanso Largo (min):", self.long_break_spinbox)
 
-        # Kanban Color Settings
-        self.todo_color_label = QLabel("Color 'Por Hacer':")
+        # Kanban Colors
         self.todo_color_button = QPushButton()
         self.todo_color_button.clicked.connect(lambda: self.select_color(self.todo_color_button, "todo_color"))
-        self.form_layout.addRow(self.todo_color_label, self.todo_color_button)
+        self.form_layout.addRow("Color 'Por Hacer':", self.todo_color_button)
 
-        self.inprogress_color_label = QLabel("Color 'En Progreso':")
         self.inprogress_color_button = QPushButton()
         self.inprogress_color_button.clicked.connect(lambda: self.select_color(self.inprogress_color_button, "inprogress_color"))
-        self.form_layout.addRow(self.inprogress_color_label, self.inprogress_color_button)
+        self.form_layout.addRow("Color 'En Progreso':", self.inprogress_color_button)
 
-        self.done_color_label = QLabel("Color 'Terminado':")
         self.done_color_button = QPushButton()
         self.done_color_button.clicked.connect(lambda: self.select_color(self.done_color_button, "done_color"))
-        self.form_layout.addRow(self.done_color_label, self.done_color_button)
+        self.form_layout.addRow("Color 'Terminado':", self.done_color_button)
 
-        # --- AI Settings ---
-        self.ai_provider_label = QLabel("Proveedor de IA:")
+        # AI Settings
         self.ai_provider_combo = QComboBox()
-        self.ai_provider_combo.addItems(["", "OpenAI"]) # "" for None
-        self.form_layout.addRow(self.ai_provider_label, self.ai_provider_combo)
+        self.ai_provider_combo.addItems(["", "OpenAI"])
+        self.form_layout.addRow("Proveedor de IA:", self.ai_provider_combo)
 
-        self.api_key_label = QLabel("Clave de API:")
         self.api_key_input = QLineEdit()
         self.api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.form_layout.addRow(self.api_key_label, self.api_key_input)
+        self.form_layout.addRow("Clave de API:", self.api_key_input)
 
         self.save_api_key_button = QPushButton("Guardar Clave de API en la Bóveda")
         self.save_api_key_button.clicked.connect(self.save_api_key_to_vault)
         self.form_layout.addRow(self.save_api_key_button)
-        # --- End AI Settings ---
 
-        self.layout.addLayout(self.form_layout)
+        self.general_layout.addLayout(self.form_layout)
 
-        # --- Application Lock Settings ---
+        # Security
         self.app_lock_checkbox = QCheckBox("Habilitar Bloqueo de Aplicación")
         self.app_lock_checkbox.stateChanged.connect(self._toggle_app_lock)
-        self.layout.addWidget(self.app_lock_checkbox)
+        self.general_layout.addWidget(self.app_lock_checkbox)
 
         self.set_app_lock_password_button = QPushButton("Establecer/Cambiar Contraseña de Bloqueo")
         self.set_app_lock_password_button.clicked.connect(self._set_app_lock_password)
-        self.layout.addWidget(self.set_app_lock_password_button)
+        self.general_layout.addWidget(self.set_app_lock_password_button)
 
         self.disable_app_lock_password_button = QPushButton("Desactivar Contraseña de Bloqueo")
         self.disable_app_lock_password_button.clicked.connect(self._disable_app_lock_password)
-        self.layout.addWidget(self.disable_app_lock_password_button)
-        # --- End Application Lock Settings ---
+        self.general_layout.addWidget(self.disable_app_lock_password_button)
 
-        # Change Vault Password Button
         self.change_password_button = QPushButton("Cambiar Contraseña de la Bóveda")
         self.change_password_button.clicked.connect(self.open_change_password_dialog)
-        self.layout.addWidget(self.change_password_button)
+        self.general_layout.addWidget(self.change_password_button)
 
+        self.tabs.addTab(self.general_tab, "General")
+
+        # --- Tab 2: Rules ---
+        self.rules_editor = RulesEditor(self.rules_manager)
+        self.tabs.addTab(self.rules_editor, "Reglas Inteligentes")
+
+        # --- Tab 3: Templates ---
+        self.templates_widget = TemplatesWidget(self.templates_manager)
+        self.tabs.addTab(self.templates_widget, "Plantillas")
+
+        # Buttons
         self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.buttons.accepted.connect(self.save_settings)
         self.buttons.rejected.connect(self.reject)
         self.layout.addWidget(self.buttons)
 
         self.load_settings()
-        self._update_app_lock_ui_state() # Initial state update
+        self._update_app_lock_ui_state()
 
     def _update_app_lock_ui_state(self):
         is_enabled = self.app_lock_checkbox.isChecked()
