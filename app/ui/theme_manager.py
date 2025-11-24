@@ -52,13 +52,23 @@ class ThemeManager:
         Raises:
             FileNotFoundError: If the theme file doesn't exist
         """
-        theme_file = self.themes_dir / f"{theme_name}.qss"
+        # Modified to load from filesystem instead of resources
+        theme_path = self.themes_dir / f"{theme_name}.qss"
         
-        if not theme_file.exists():
-            raise FileNotFoundError(f"Theme file not found: {theme_file}")
-        
-        with open(theme_file, "r", encoding="utf-8") as f:
-            return f.read()
+        if not theme_path.exists():
+            # Fallback to try finding it relative to current working directory if module path fails
+            cwd_path = Path(os.getcwd()) / "assets" / "themes" / f"{theme_name}.qss"
+            if cwd_path.exists():
+                theme_path = cwd_path
+            else:
+                raise FileNotFoundError(f"Theme file not found: {theme_path}")
+            
+        try:
+            with open(theme_path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception as e:
+            print(f"Error loading stylesheet: {e}")
+            return ""
     
     def apply_theme(self, theme_name: str, app: QApplication = None) -> None:
         """Apply a theme to the application.

@@ -5,6 +5,7 @@ log them to a file with rotation, and display a user-friendly error dialog
 before the application exits.
 """
 import sys
+import os
 import logging
 import traceback
 from logging.handlers import RotatingFileHandler
@@ -94,3 +95,96 @@ class AppErrorHandler:
         # Call default excepthook (prints to stderr)
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         sys.exit(1)
+
+    # --- Helper Methods for Common Error Scenarios ---
+
+    @staticmethod
+    def log_error(message: str, exception: Exception = None):
+        """Log an error message with optional exception details.
+        
+        Args:
+            message: Error message to log
+            exception: Optional exception object to include in log
+        """
+        if exception:
+            logging.error(f"{message}: {str(exception)}", exc_info=True)
+        else:
+            logging.error(message)
+
+    @staticmethod
+    def log_warning(message: str):
+        """Log a warning message.
+        
+        Args:
+            message: Warning message to log
+        """
+        logging.warning(message)
+
+    @staticmethod
+    def log_info(message: str):
+        """Log an informational message.
+        
+        Args:
+            message: Info message to log
+        """
+        logging.info(message)
+
+    @staticmethod
+    def log_debug(message: str):
+        """Log a debug message.
+        
+        Args:
+            message: Debug message to log
+        """
+        logging.debug(message)
+
+    @staticmethod
+    def show_error_dialog(title: str, message: str, details: str = None):
+        """Show an error dialog to the user without exiting the application.
+        
+        Args:
+            title: Dialog window title
+            message: Main error message
+            details: Optional detailed error information
+        """
+        app = QApplication.instance()
+        if app:
+            error_box = QMessageBox()
+            error_box.setIcon(QMessageBox.Icon.Critical)
+            error_box.setWindowTitle(title)
+            error_box.setText(message)
+            if details:
+                error_box.setDetailedText(details)
+            error_box.exec()
+
+    @staticmethod
+    def show_warning_dialog(title: str, message: str):
+        """Show a warning dialog to the user.
+        
+        Args:
+            title: Dialog window title
+            message: Warning message
+        """
+        app = QApplication.instance()
+        if app:
+            warning_box = QMessageBox()
+            warning_box.setIcon(QMessageBox.Icon.Warning)
+            warning_box.setWindowTitle(title)
+            warning_box.setText(message)
+            warning_box.exec()
+
+    @staticmethod
+    def show_info_dialog(title: str, message: str):
+        """Show an informational dialog to the user.
+        
+        Args:
+            title: Dialog window title
+            message: Information message
+        """
+        app = QApplication.instance()
+        if app:
+            info_box = QMessageBox()
+            info_box.setIcon(QMessageBox.Icon.Information)
+            info_box.setWindowTitle(title)
+            info_box.setText(message)
+            info_box.exec()

@@ -2,17 +2,17 @@ from PyQt6.QtCore import QObject
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 # Imports for all the widgets it will manage
-from app.ui.search_results_widget import SearchResultsWidget
+from app.ui.tools.search_results_widget import SearchResultsWidget
 from app.ui.welcome_widget import WelcomeWidget
-from app.ui.notes_widget import NotesWidget
-from app.ui.kanban_widget import KanbanWidget
-from app.ui.gantt_chart_widget import GanttChartWidget
-from app.ui.checklist_widget import ChecklistWidget
-from app.ui.agenda_widget import AgendaWidget
-from app.ui.rss_reader_widget import RssReaderWidget
-from app.ui.vault_widget import VaultWidget
+from app.ui.tools.notes_widget import NotesWidget
+from app.ui.tools.kanban_widget import KanbanWidget
+from app.ui.tools.gantt_chart_widget import GanttChartWidget
+from app.ui.tools.checklist_widget import ChecklistWidget
+from app.ui.tools.agenda_widget import AgendaWidget
+from app.ui.tools.rss_reader_widget import RssReaderWidget
+from app.ui.tools.vault_widget import VaultWidget
 from app.ui.help_widget import HelpWidget
-from app.ui.audio_player_widget import AudioPlayerWidget
+from app.ui.tools.audio_player_widget import AudioPlayerWidget
 
 class WorkspaceManager(QObject):
     """

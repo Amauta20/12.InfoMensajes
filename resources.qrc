@@ -1,0 +1,10 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <file>assets/help_manual.html</file>
+        <file>assets/icon.ico</file>
+        <file>assets/fa-solid-900.ttf</file>
+        <file>assets/themes/dark.qss</file>
+        <file>assets/themes/light.qss</file>
+    </qresource>
+</RCC>

@@ -8,14 +8,42 @@ from app.ui.main_window import MainWindow
 from app.db.database import create_schema
 from app.core.di_container import DIContainer
 from app.core.error_handler import AppErrorHandler
+# import resources_rc
 
 import logging, threading
 
-# Workaround for QtWebEngine GPU issues
-os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-gpu --disable-software-rasterizer --disable-gpu-compositing --disable-gpu-rasterization --no-sandbox --use-angle=swiftshader"
-os.environ["QT_QUICK_BACKEND"] = "software"
-os.environ["QTWEBENGINE_CHROMIUM_ARGUMENTS"] = "--use-angle=d3d11"
-os.environ["QT_OPENGL"] = "software"
+def setup_qt_environment():
+    """
+    Configures Qt environment variables for optimal performance and stability.
+    
+    This function centralizes all Qt-related environment configuration:
+    - Disables GPU acceleration to avoid QtWebEngine crashes
+    - Disables WebGL for better performance
+    - Limits disk cache to reduce I/O overhead
+    - Forces software rendering for compatibility
+    """
+    # GPU and rendering configuration
+    flags = [
+        "--disable-gpu",
+        "--disable-software-rasterizer",
+        "--disable-gpu-compositing",
+        "--disable-gpu-rasterization",
+        "--no-sandbox",
+        "--use-angle=swiftshader",
+        "--disable-webgl",              # Disable WebGL for performance (Item 8)
+        "--disable-webgl2",             # Disable WebGL 2.0
+        "--disk-cache-size=0",          # Limit cache to reduce I/O (Item 8)
+    ]
+    
+    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = " ".join(flags)
+    os.environ["QT_QUICK_BACKEND"] = "software"
+    os.environ["QTWEBENGINE_CHROMIUM_ARGUMENTS"] = "--use-angle=d3d11"
+    os.environ["QT_OPENGL"] = "software"
+    
+    logging.info("Qt environment configured successfully")
+
+# Initialize Qt environment before any Qt imports
+setup_qt_environment()
 
 def update_service_scripts(conn):
     """

@@ -2,8 +2,18 @@ import sqlite3
 import os
 from pathlib import Path
 
-# Path to the SQLite database file (project root / database.db)
-DB_FILE = Path(__file__).resolve().parent.parent.parent / 'database.db'
+import sys
+
+# Path to the SQLite database file
+if getattr(sys, 'frozen', False):
+    # Production mode: Use AppData
+    app_data_dir = os.path.join(os.getenv('APPDATA'), 'InfoMensajero')
+    if not os.path.exists(app_data_dir):
+        os.makedirs(app_data_dir)
+    DB_FILE = Path(app_data_dir) / 'database.db'
+else:
+    # Development mode: Use project root
+    DB_FILE = Path(__file__).resolve().parent.parent.parent / 'database.db'
 
 def get_db_connection(db_file_path: str | None = None) -> sqlite3.Connection:
     """Create and return a SQLite connection.
@@ -13,7 +23,9 @@ def get_db_connection(db_file_path: str | None = None) -> sqlite3.Connection:
     foreign‑key support.
     """
     path_to_use = Path(db_file_path) if db_file_path else DB_FILE
-    conn = sqlite3.connect(path_to_use)
+    # check_same_thread=False allows using the connection in multiple threads.
+    # With WAL mode enabled, this is safer, but we should still be careful.
+    conn = sqlite3.connect(path_to_use, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     # Enable foreign key constraints
     conn.execute("PRAGMA foreign_keys = ON;")

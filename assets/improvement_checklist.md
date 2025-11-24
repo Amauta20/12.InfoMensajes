@@ -10,17 +10,15 @@
 | 4 | **Recursos estáticos** | Empaquetar HTML/CSS/Imágenes con `QResource` | - Crear archivo `.qrc` y compilar con `pyrcc6`.<br>- Modificar `HelpWidget` para cargar recurso interno. | ⬜ Pendiente |
 | 5 | **Temas y estilos** | Cambiar tema dinámicamente (dark / light) | - Mover hoja de estilos a `assets/styles.qss`.<br>- Añadir menú “Tema” en Configuración. | ⬜ Pendiente |
 | 6 | **Modularidad UI** | Widgets independientes y registro lazy‑loading | - Crear paquete `app/ui/tools/` con widgets por herramienta.<br>- Registrar en `DIContainer`. | ⬜ Pendiente |
-| 7 | **Manejo de errores** | Unificar gestión de excepciones y logging | - Clase `AppErrorHandler` con diálogos y `RotatingFileHandler`.
-- Uso de `logging` en todo el proyecto. | ⬜ Pendiente |
-| 8 | **Rendimiento QtWebEngine** | Desactivar WebGL y limitar caché | - Flags `--disable-webgl` y `--disk-cache-size=0` en `setup_qt_environment()`. | ⬜ Pendiente |
+| 7 | **Manejo de errores** | Unificar gestión de excepciones y logging | - Clase `AppErrorHandler` con diálogos y `RotatingFileHandler`.<br>- Uso de `logging` en todo el proyecto. | ✅ Hecho |
+| 8 | **Rendimiento QtWebEngine** | Desactivar WebGL y limitar caché | - Flags `--disable-webgl` y `--disk-cache-size=0` en `setup_qt_environment()`. | ✅ Hecho |
 | 9 | **Testing y CI** | Pruebas unitarias y pipeline GitHub Actions | - Tests para `DIContainer`, `ServiceManager`, `HelpWidget`.
 - Workflow que ejecuta `pytest` y verifica arranque sin errores GPU. | ⬜ Pendiente |
 |10| **Documentación automática** | Generar `help_manual.html` a partir de docstrings | - Usar **Sphinx** o **MkDocs** con tema oscuro.
 - Script `make docs` para generar manual. | ⬜ Pendiente |
 |11| **Seguridad Bóveda** | Cambio de contraseña maestra y cifrado fuerte | - UI para cambiar clave.
 - Usar `cryptography` con `AES‑GCM`. | ⬜ Pendiente |
-|12| **Optimización IA** | Cachear respuestas y timeout configurable | - Implementar `LRUCache` en `AIManager`.
-- Añadir timeout en llamadas al modelo local. | ⬜ Pendiente |
+|12| **Optimización IA** | Cachear respuestas y timeout configurable | - Implementar `LRUCache` en `AIManager`.<br>- Añadir timeout en llamadas al modelo local. | ✅ Hecho |
 
 ## 📅 Cronograma Tentativo (sprints de 1 semana)
 | Semana | Tareas principales |

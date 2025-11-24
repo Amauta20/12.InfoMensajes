@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDesktopServices
 from app.db.rss_manager import RssManager
 from app.db import database
-from app.ui.rss_article_item_widget import RssArticleItemWidget
+from app.ui.tools.rss_article_item_widget import RssArticleItemWidget
 
 class RssReaderWidget(QWidget):
     def __init__(self, conn, parent=None):

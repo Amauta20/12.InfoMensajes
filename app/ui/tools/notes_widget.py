@@ -6,7 +6,7 @@ from app.db.settings_manager import SettingsManager
 from app.db import database
 
 from app.services_layer.notes_service import NotesService
-from app.ui.edit_note_dialog import EditNoteDialog
+from app.ui.tools.edit_note_dialog import EditNoteDialog
 
 class NoteInput(QTextEdit):
     def __init__(self, parent):

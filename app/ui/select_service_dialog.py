@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QListWidget, QPushButton, QLabel, QListWidgetItem
 from PyQt6.QtCore import Qt, pyqtSignal
 from app.services import service_manager
+from app.ui.icon_manager import IconManager
 
 class SelectServiceDialog(QDialog):
     # Signals to indicate what action was chosen
@@ -9,6 +10,7 @@ class SelectServiceDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.icon_manager = IconManager()
         self.setWindowTitle("Añadir Servicio")
         self.setModal(True)
         self.setFixedSize(400, 500)
@@ -29,8 +31,10 @@ class SelectServiceDialog(QDialog):
         # Action Buttons
         self.button_layout = QHBoxLayout()
         self.select_button = QPushButton("Seleccionar")
+        self.select_button.setIcon(self.icon_manager.get_icon("check", size=14))
         self.select_button.clicked.connect(self._on_select_button_clicked)
         self.cancel_button = QPushButton("Cancelar")
+        self.cancel_button.setIcon(self.icon_manager.get_icon("times", size=14))
         self.cancel_button.clicked.connect(self.reject)
 
         self.button_layout.addStretch()
@@ -45,6 +49,16 @@ class SelectServiceDialog(QDialog):
         for service in catalog:
             item = QListWidgetItem(service['name'])
             item.setData(Qt.ItemDataRole.UserRole, service) # Store full service dict
+            
+            # Set icon
+            icon_name = service['name'].lower()
+            # Try to get specific icon, otherwise fallback to globe
+            if icon_name not in self.icon_manager.ICONS:
+                icon_name = "globe"
+            
+            icon = self.icon_manager.get_icon(icon_name, size=24)
+            item.setIcon(icon)
+            
             self.catalog_list.addItem(item)
 
     def _on_catalog_item_double_clicked(self, item):

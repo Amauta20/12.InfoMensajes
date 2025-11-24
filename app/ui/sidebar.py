@@ -6,6 +6,8 @@ from app.ui.add_service_dialog import AddServiceDialog
 from app.ui.edit_service_name_dialog import EditServiceNameDialog
 from app.ui.select_service_dialog import SelectServiceDialog
 
+from app.ui.icon_manager import IconManager
+
 class Sidebar(QWidget):
     service_selected = Signal(str, str) # Signal to emit URL and profile_path
     service_deleted = Signal(int) # Signal to emit service_id when a service is deleted
@@ -22,6 +24,7 @@ class Sidebar(QWidget):
         super().__init__(parent)
         self.service_manager = service_manager_instance # Store instance
         self._unread_statuses = {} # {service_id: True/False}
+        self.icon_manager = IconManager()
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(5, 5, 5, 5)
         self.layout.setSpacing(5)
@@ -31,6 +34,7 @@ class Sidebar(QWidget):
         self.layout.addWidget(self.services_title)
 
         self.add_service_button = QPushButton("Añadir Servicio")
+        self.add_service_button.setIcon(self.icon_manager.get_icon("plus", size=14))
         self.add_service_button.clicked.connect(self.open_select_service_dialog)
         self.layout.addWidget(self.add_service_button)
 
@@ -46,36 +50,35 @@ class Sidebar(QWidget):
         self.layout.addStretch() # Push services to top
 
         # --- Productivity Tools Buttons ---
-        self.notes_button = QPushButton("Notas")
-        self.notes_button.clicked.connect(self.show_notes_requested.emit)
+        def create_sidebar_button(text, icon_name, callback):
+            btn = QPushButton(text)
+            btn.setIcon(self.icon_manager.get_icon(icon_name, size=16))
+            btn.clicked.connect(callback)
+            btn.setStyleSheet("text-align: left; padding-left: 10px;")
+            return btn
+
+        self.notes_button = create_sidebar_button("Notas", "sticky-note", self.show_notes_requested.emit)
         self.layout.addWidget(self.notes_button)
 
-        self.kanban_button = QPushButton("Kanban")
-        self.kanban_button.clicked.connect(self.show_kanban_requested.emit)
+        self.kanban_button = create_sidebar_button("Kanban", "columns", self.show_kanban_requested.emit)
         self.layout.addWidget(self.kanban_button)
 
-        self.gantt_chart_button = QPushButton("Diagrama de Gantt")
-        self.gantt_chart_button.clicked.connect(self.show_gantt_chart_requested.emit)
+        self.gantt_chart_button = create_sidebar_button("Diagrama de Gantt", "stream", self.show_gantt_chart_requested.emit)
         self.layout.addWidget(self.gantt_chart_button)
 
-        self.checklist_button = QPushButton("Checklist")
-        self.checklist_button.clicked.connect(self.show_checklist_requested.emit)
+        self.checklist_button = create_sidebar_button("Checklist", "check-square", self.show_checklist_requested.emit)
         self.layout.addWidget(self.checklist_button)
 
-        self.reminders_button = QPushButton("Recordatorios")
-        self.reminders_button.clicked.connect(self.show_reminders_requested.emit)
+        self.reminders_button = create_sidebar_button("Recordatorios", "bell", self.show_reminders_requested.emit)
         self.layout.addWidget(self.reminders_button)
 
-        self.rss_reader_button = QPushButton("Lector RSS")
-        self.rss_reader_button.clicked.connect(self.show_rss_reader_requested.emit)
+        self.rss_reader_button = create_sidebar_button("Lector RSS", "rss", self.show_rss_reader_requested.emit)
         self.layout.addWidget(self.rss_reader_button)
 
-        self.vault_button = QPushButton("Bóveda")
-        self.vault_button.clicked.connect(self.show_vault_requested.emit)
+        self.vault_button = create_sidebar_button("Bóveda", "key", self.show_vault_requested.emit)
         self.layout.addWidget(self.vault_button)
 
-        self.audio_player_button = QPushButton("Reproductor de Audio")
-        self.audio_player_button.clicked.connect(self.show_audio_player_requested.emit)
+        self.audio_player_button = create_sidebar_button("Reproductor de Audio", "music", self.show_audio_player_requested.emit)
         self.layout.addWidget(self.audio_player_button)
 
     # --- Service Management Methods ---
@@ -110,6 +113,15 @@ class Sidebar(QWidget):
 
         for service in services:
             btn = QPushButton(service['name'])
+            
+            # Set icon
+            icon_name = service['name'].lower()
+            # Try to get specific icon, otherwise fallback to globe
+            if icon_name not in self.icon_manager.ICONS:
+                icon_name = "globe"
+            btn.setIcon(self.icon_manager.get_icon(icon_name, size=16))
+            btn.setStyleSheet("text-align: left; padding-left: 10px;")
+
             btn.setProperty('service_id', service['id']) # Store service_id in button property
             btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             btn.customContextMenuRequested.connect(lambda pos, b=btn: self.show_service_context_menu(pos, b))
@@ -130,14 +142,17 @@ class Sidebar(QWidget):
         menu = QMenu(self)
 
         add_instance_action = QAction("Añadir Otra Instancia", self)
+        add_instance_action.setIcon(self.icon_manager.get_icon("plus", size=14, color="#333")) # Dark color for menu
         add_instance_action.triggered.connect(lambda checked, s_id=service_id: self.add_another_instance_from_ui(s_id))
         menu.addAction(add_instance_action)
 
         edit_action = QAction("Editar Nombre del Servicio", self)
+        edit_action.setIcon(self.icon_manager.get_icon("edit", size=14, color="#333"))
         edit_action.triggered.connect(lambda checked, s_id=service_id: self.edit_service_name_from_ui(s_id))
         menu.addAction(edit_action)
 
         delete_action = QAction("Eliminar Servicio", self)
+        delete_action.setIcon(self.icon_manager.get_icon("trash", size=14, color="#333"))
         delete_action.triggered.connect(lambda checked, s_id=service_id: self.delete_service_from_ui(s_id))
         menu.addAction(delete_action)
 

@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 from PyQt6.QtCore import QTimer, QTime, pyqtSignal as Signal
 from app.db.settings_manager import SettingsManager
+from app.ui.icon_manager import IconManager
 
 class PomodoroWidget(QWidget):
     pomodoro_finished = Signal(str)
@@ -10,6 +11,7 @@ class PomodoroWidget(QWidget):
         super().__init__(parent)
         self.settings_manager = settings_manager_instance
         self.notification_manager = notification_manager # Store instance
+        self.icon_manager = IconManager()
         self.load_settings()
 
         self.current_mode = "Pomodoro"
@@ -26,22 +28,29 @@ class PomodoroWidget(QWidget):
         self.time_label.setStyleSheet("font-size: 14px; font-weight: bold; margin-right: 5px; color: #f0f0f0;")
         self.layout.addWidget(self.time_label)
 
-        self.start_button = QPushButton("Iniciar")
+        self.start_button = QPushButton()
+        self.start_button.setToolTip("Iniciar")
+        self.start_button.setIcon(self.icon_manager.get_icon("play", size=14))
         self.start_button.clicked.connect(self.start_timer)
         self.layout.addWidget(self.start_button)
 
-        self.pause_button = QPushButton("Pausar")
+        self.pause_button = QPushButton()
+        self.pause_button.setToolTip("Pausar")
+        self.pause_button.setIcon(self.icon_manager.get_icon("pause", size=14))
         self.pause_button.clicked.connect(self.pause_timer)
         self.pause_button.setVisible(False)
         self.layout.addWidget(self.pause_button)
 
-        self.reset_button = QPushButton("Reiniciar")
+        self.reset_button = QPushButton()
+        self.reset_button.setToolTip("Reiniciar")
+        self.reset_button.setIcon(self.icon_manager.get_icon("redo", size=14))
         self.reset_button.clicked.connect(self.reset_timer)
         self.layout.addWidget(self.reset_button)
 
         # Focus Mode Toggle
         self.focus_button = QPushButton("Modo Enfoque")
         self.focus_button.setCheckable(True)
+        self.focus_button.setIcon(self.icon_manager.get_icon("eye", size=14))
         self.focus_button.setStyleSheet("""
             QPushButton:checked {
                 background-color: #8e44ad;
@@ -96,8 +105,10 @@ class PomodoroWidget(QWidget):
         self.focus_mode_toggled.emit(checked)
         if checked:
             self.focus_button.setText("Salir de Enfoque")
+            self.focus_button.setIcon(self.icon_manager.get_icon("eye-slash", size=14))
         else:
             self.focus_button.setText("Modo Enfoque")
+            self.focus_button.setIcon(self.icon_manager.get_icon("eye", size=14))
 
     def start_timer(self):
         self.timer.start(1000)

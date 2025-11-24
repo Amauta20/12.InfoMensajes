@@ -22,7 +22,7 @@ from app.ui.shortcut_manager import ShortcutManager
 from app.ui.notification_manager import NotificationManager
 from app.ui.workspace_manager import WorkspaceManager
 
-from app.ui.pomodoro_widget import PomodoroWidget
+from app.ui.tools.pomodoro_widget import PomodoroWidget
 from app.ui.unified_settings_dialog import UnifiedSettingsDialog
 from app.ui.about_dialog import AboutDialog
 from PyQt6.QtGui import QFontDatabase
@@ -35,11 +35,14 @@ class MainWindow(QMainWindow):
         self.metrics_manager = container.metrics_manager
         self.vault_manager = container.vault_manager
 
-        font_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'fa-solid-900.ttf'))
-        if os.path.exists(font_path):
-            QFontDatabase.addApplicationFont(font_path)
-        else:
-            print(f"Font Awesome file not found at: {font_path}")
+        # Modified to load from filesystem
+        font_path = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'fa-solid-900.ttf')
+        if not os.path.exists(font_path):
+             font_path = os.path.join(os.getcwd(), 'assets', 'fa-solid-900.ttf')
+
+        font_id = QFontDatabase.addApplicationFont(font_path)
+        if font_id == -1:
+            print(f"Failed to load Font Awesome from: {font_path}")
 
         # 1. Get core data managers and services from container
         self.settings_manager_instance = container.settings_manager
@@ -55,9 +58,15 @@ class MainWindow(QMainWindow):
         self.reminders_service_instance = container.reminders_service
         self.rules_manager = container.rules_manager
         self.templates_manager = container.templates_manager
+        self.rules_manager = container.rules_manager
+        self.templates_manager = container.templates_manager
         self.theme_manager = container.theme_manager
 
-        self.setWindowTitle("InfoMensajero")
+        # Initialize IconManager
+        from app.ui.icon_manager import IconManager
+        self.icon_manager = IconManager()
+
+        self.setWindowTitle("InfoMensajero v1.6")
         self.setGeometry(100, 100, 1280, 720)
 
         # 2. Instantiate NotificationManager (as it's a dependency for the toolbar)
@@ -146,6 +155,9 @@ class MainWindow(QMainWindow):
             }
         """)
         self.search_input.returnPressed.connect(self.perform_global_search)
+        # Add search icon to the input action if desired, or just keep it as is.
+        # For now, let's keep the input simple but maybe add a search button next to it?
+        # Actually, let's just leave the input as is for now.
         toolbar_layout.addWidget(self.search_input)
         
         # Pomodoro Widget
@@ -155,29 +167,31 @@ class MainWindow(QMainWindow):
         
         toolbar_layout.addStretch()
 
+        # Helper to create icon buttons
+        def create_tool_button(text, icon_name, callback):
+            btn = QPushButton(text)
+            btn.setIcon(self.icon_manager.get_icon(icon_name, size=16))
+            btn.clicked.connect(callback)
+            return btn
+
         # Metrics Button
-        self.metrics_button = QPushButton("Métricas")
-        self.metrics_button.clicked.connect(self.open_metrics_dashboard)
+        self.metrics_button = create_tool_button("Métricas", "chart-bar", self.open_metrics_dashboard)
         toolbar_layout.addWidget(self.metrics_button)
 
         # AI Assistant Button
-        self.ai_button = QPushButton("Asistente IA")
-        self.ai_button.clicked.connect(self.toggle_ai_assistant)
+        self.ai_button = create_tool_button("Asistente IA", "robot", self.toggle_ai_assistant)
         toolbar_layout.addWidget(self.ai_button)
         
         # Theme Button
-        self.theme_button = QPushButton("Tema")
-        self.theme_button.clicked.connect(self.toggle_theme)
+        self.theme_button = create_tool_button("Tema", "adjust", self.toggle_theme)
         toolbar_layout.addWidget(self.theme_button)
 
         # Settings Button
-        self.general_settings_button = QPushButton("Configuración")
-        self.general_settings_button.clicked.connect(self.open_unified_settings_dialog)
+        self.general_settings_button = create_tool_button("Configuración", "cog", self.open_unified_settings_dialog)
         toolbar_layout.addWidget(self.general_settings_button)
 
         # Help Button
-        self.help_button = QPushButton("Ayuda")
-        self.help_button.clicked.connect(self.open_about_dialog)
+        self.help_button = create_tool_button("Ayuda", "question-circle", self.open_about_dialog)
         toolbar_layout.addWidget(self.help_button)
         
         self.toolbar.addWidget(toolbar_container)
@@ -193,7 +207,7 @@ class MainWindow(QMainWindow):
     def toggle_ai_assistant(self):
         if not hasattr(self, 'ai_dock'):
             from PyQt6.QtWidgets import QDockWidget
-            from app.ui.executive_assistant_widget import ExecutiveAssistantWidget
+            from app.ui.tools.executive_assistant_widget import ExecutiveAssistantWidget
             
             self.ai_dock = QDockWidget("Asistente Ejecutivo", self)
             self.ai_dock.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea | Qt.DockWidgetArea.LeftDockWidgetArea)
@@ -213,7 +227,7 @@ class MainWindow(QMainWindow):
 
 
     def open_metrics_dashboard(self):
-        from app.ui.metrics_dashboard import MetricsDashboard
+        from app.ui.tools.metrics_dashboard import MetricsDashboard
         dialog = QDialog(self)
         dialog.setWindowTitle("Tablero de Productividad")
         dialog.setMinimumSize(800, 600)
@@ -247,7 +261,7 @@ class MainWindow(QMainWindow):
         super().closeEvent(event)
 
     def open_unified_settings_dialog(self):
-        dialog = UnifiedSettingsDialog(self.settings_manager_instance, self.rules_manager, self.templates_manager, self)
+        dialog = UnifiedSettingsDialog(self.settings_manager_instance, self.rules_manager, self.templates_manager, self.theme_manager, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # Ensure Kanban widget exists before loading
             if not getattr(self.workspace_manager, 'kanban_widget', None):

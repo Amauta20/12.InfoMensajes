@@ -14,6 +14,10 @@ class HelpWidget(QWidget):
         self.load_help_manual()
 
     def load_help_manual(self):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        help_file_path = os.path.join(current_dir, '..', '..', 'assets', 'help_manual.html')
-        self.web_view.setUrl(QUrl.fromLocalFile(help_file_path))
+        # Modified to load from filesystem
+        help_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'help_manual.html'))
+        if not os.path.exists(help_path):
+             # Fallback for different execution contexts
+             help_path = os.path.abspath(os.path.join(os.getcwd(), 'assets', 'help_manual.html'))
+        
+        self.web_view.setUrl(QUrl.fromLocalFile(help_path))

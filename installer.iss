@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "InfoMensajero"
-#define MyAppVersion "1.4"
+#define MyAppVersion "1.6"
 #define MyAppPublisher "CIBERTEC.ORG"
 #define MyAppURL "https://www.cibertec.org/"
 #define MyAppExeName "InfoMensajero.exe"

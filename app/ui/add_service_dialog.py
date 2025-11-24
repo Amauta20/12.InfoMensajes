@@ -1,10 +1,12 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QLabel, QMessageBox
 from PyQt6.QtCore import Qt
 from urllib.parse import urlparse
+from app.ui.icon_manager import IconManager
 
 class AddServiceDialog(QDialog):
     def __init__(self, initial_name="", initial_url="", initial_icon="", parent=None):
         super().__init__(parent)
+        self.icon_manager = IconManager()
         self.setWindowTitle("Añadir Nuevo Servicio")
         self.setModal(True)
         self.setFixedSize(300, 180)
@@ -34,8 +36,10 @@ class AddServiceDialog(QDialog):
         # Buttons
         self.button_layout = QHBoxLayout()
         self.add_button = QPushButton("Añadir")
+        self.add_button.setIcon(self.icon_manager.get_icon("plus", size=14))
         self.add_button.clicked.connect(self.validate_and_accept)
         self.cancel_button = QPushButton("Cancelar")
+        self.cancel_button.setIcon(self.icon_manager.get_icon("times", size=14))
         self.cancel_button.clicked.connect(self.reject)
 
         self.button_layout.addStretch()

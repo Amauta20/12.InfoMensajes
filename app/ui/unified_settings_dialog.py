@@ -10,17 +10,20 @@ from app.ui.change_password_dialog import ChangePasswordDialog
 from app.ui.lock_screen import LockScreen
 from app.ui.rules_editor import RulesEditor
 from app.ui.templates_widget import TemplatesWidget
+from app.ui.icon_manager import IconManager
 from zoneinfo import available_timezones
 
 class UnifiedSettingsDialog(QDialog):
-    def __init__(self, settings_manager_instance, rules_manager, templates_manager, parent=None):
+    def __init__(self, settings_manager_instance, rules_manager, templates_manager, theme_manager, parent=None):
         super().__init__(parent)
         self.settings_manager = settings_manager_instance
         self.rules_manager = rules_manager
         self.templates_manager = templates_manager
+        self.theme_manager = theme_manager
         self.db_connection = self.settings_manager.conn
         self.app_security_manager = AppSecurityManager(self.settings_manager)
         self.vault_manager = VaultManager(self.db_connection)
+        self.icon_manager = IconManager()
         
         self.setWindowTitle("Configuración y Automatización")
         self.setMinimumSize(800, 600)
@@ -37,6 +40,13 @@ class UnifiedSettingsDialog(QDialog):
         self.todo_color = None
         self.inprogress_color = None
         self.done_color = None
+
+        # Theme Selection
+        self.theme_label = QLabel("Tema de la Aplicación:")
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItem("Oscuro", "dark")
+        self.theme_combo.addItem("Claro", "light")
+        self.form_layout.addRow(self.theme_label, self.theme_combo)
 
         # Timezone
         self.timezone_label = QLabel("Zona Horaria:")
@@ -85,10 +95,12 @@ class UnifiedSettingsDialog(QDialog):
         self.form_layout.addRow("Color 'Por Hacer':", self.todo_color_button)
 
         self.inprogress_color_button = QPushButton()
+        self.inprogress_color_button.setIcon(self.icon_manager.get_icon("palette", size=14))
         self.inprogress_color_button.clicked.connect(lambda: self.select_color(self.inprogress_color_button, "inprogress_color"))
         self.form_layout.addRow("Color 'En Progreso':", self.inprogress_color_button)
 
         self.done_color_button = QPushButton()
+        self.done_color_button.setIcon(self.icon_manager.get_icon("palette", size=14))
         self.done_color_button.clicked.connect(lambda: self.select_color(self.done_color_button, "done_color"))
         self.form_layout.addRow("Color 'Terminado':", self.done_color_button)
 
@@ -102,6 +114,7 @@ class UnifiedSettingsDialog(QDialog):
         self.form_layout.addRow("Clave de API:", self.api_key_input)
 
         self.save_api_key_button = QPushButton("Guardar Clave de API en la Bóveda")
+        self.save_api_key_button.setIcon(self.icon_manager.get_icon("key", size=14))
         self.save_api_key_button.clicked.connect(self.save_api_key_to_vault)
         self.form_layout.addRow(self.save_api_key_button)
 
@@ -113,29 +126,36 @@ class UnifiedSettingsDialog(QDialog):
         self.general_layout.addWidget(self.app_lock_checkbox)
 
         self.set_app_lock_password_button = QPushButton("Establecer/Cambiar Contraseña de Bloqueo")
+        self.set_app_lock_password_button.setIcon(self.icon_manager.get_icon("lock", size=14))
         self.set_app_lock_password_button.clicked.connect(self._set_app_lock_password)
         self.general_layout.addWidget(self.set_app_lock_password_button)
 
         self.disable_app_lock_password_button = QPushButton("Desactivar Contraseña de Bloqueo")
+        self.disable_app_lock_password_button.setIcon(self.icon_manager.get_icon("unlock", size=14))
         self.disable_app_lock_password_button.clicked.connect(self._disable_app_lock_password)
         self.general_layout.addWidget(self.disable_app_lock_password_button)
 
         self.change_password_button = QPushButton("Cambiar Contraseña de la Bóveda")
+        self.change_password_button.setIcon(self.icon_manager.get_icon("key", size=14))
         self.change_password_button.clicked.connect(self.open_change_password_dialog)
         self.general_layout.addWidget(self.change_password_button)
 
-        self.tabs.addTab(self.general_tab, "General")
+        self.tabs.addTab(self.general_tab, self.icon_manager.get_icon("cog", size=16), "General")
 
         # --- Tab 2: Rules ---
         self.rules_editor = RulesEditor(self.rules_manager)
-        self.tabs.addTab(self.rules_editor, "Reglas Inteligentes")
+        self.tabs.addTab(self.rules_editor, self.icon_manager.get_icon("gavel", size=16), "Reglas Inteligentes")
 
         # --- Tab 3: Templates ---
         self.templates_widget = TemplatesWidget(self.templates_manager)
-        self.tabs.addTab(self.templates_widget, "Plantillas")
+        self.tabs.addTab(self.templates_widget, self.icon_manager.get_icon("file-alt", size=16), "Plantillas")
 
         # Buttons
         self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setIcon(self.icon_manager.get_icon("save", size=16))
+        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Guardar")
+        self.buttons.button(QDialogButtonBox.StandardButton.Cancel).setIcon(self.icon_manager.get_icon("times", size=16))
+        self.buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
         self.buttons.accepted.connect(self.save_settings)
         self.buttons.rejected.connect(self.reject)
         self.layout.addWidget(self.buttons)
@@ -210,6 +230,49 @@ class UnifiedSettingsDialog(QDialog):
         self.pomodoro_spinbox.setValue(self.settings_manager.get_pomodoro_duration())
         self.short_break_spinbox.setValue(self.settings_manager.get_short_break_duration())
         self.long_break_spinbox.setValue(self.settings_manager.get_long_break_duration())
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self._update_app_lock_ui_state()
+
+    def _disable_app_lock_password(self):
+        if not self.app_security_manager.has_lock_password():
+            QMessageBox.information(self, "Bloqueo de Aplicación", "No hay contraseña de bloqueo establecida para desactivar.")
+            return
+
+        # Verify current password before disabling
+        verify_dialog = LockScreen(self.app_security_manager, self)
+        verify_dialog.setWindowTitle("Confirmar Contraseña Actual")
+        verify_dialog.info_label.setText("Introduce tu contraseña actual para desactivar el bloqueo.")
+        if verify_dialog.exec() == QDialog.DialogCode.Accepted:
+            reply = QMessageBox.question(self, "Desactivar Bloqueo", 
+                                         "¿Estás seguro de que quieres desactivar la contraseña de bloqueo de la aplicación? Esto eliminará la contraseña.",
+                                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if reply == QMessageBox.StandardButton.Yes:
+                self.app_security_manager.set_lock_password("") # Clear the hash
+                self.app_security_manager.set_lock_enabled(False)
+                QMessageBox.information(self, "Bloqueo de Aplicación", "Contraseña de bloqueo desactivada correctamente.")
+                self._update_app_lock_ui_state()
+        else:
+            QMessageBox.warning(self, "Desactivar Bloqueo", "Contraseña incorrecta. No se desactivó el bloqueo.")
+
+
+    def open_change_password_dialog(self):
+        try:
+            # Re-instantiate VaultManager to ensure it's fresh, though not strictly necessary if state is managed well
+            vault_manager = VaultManager(self.db_connection)
+            dialog = ChangePasswordDialog(vault_manager, self)
+            dialog.exec()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo abrir el diálogo de cambio de contraseña: {e}")
+
+    def load_settings(self):
+        self.timezone_combo.setCurrentText(self.settings_manager.get_timezone())
+        self.datetime_format_combo.setCurrentText(self.settings_manager.get_datetime_format())
+        self.pre_notification_days_spin.setValue(self.settings_manager.get_pre_notification_offset_days())
+        self.pre_notification_hours_spin.setValue(self.settings_manager.get_pre_notification_offset_hours())
+        self.pre_notification_minutes_spin.setValue(self.settings_manager.get_pre_notification_offset_minutes())
+        self.pomodoro_spinbox.setValue(self.settings_manager.get_pomodoro_duration())
+        self.short_break_spinbox.setValue(self.settings_manager.get_short_break_duration())
+        self.long_break_spinbox.setValue(self.settings_manager.get_long_break_duration())
 
         self.todo_color = self.settings_manager.get_todo_color()
         self.todo_color_button.setStyleSheet(f"background-color: {self.todo_color}")
@@ -219,6 +282,12 @@ class UnifiedSettingsDialog(QDialog):
 
         self.done_color = self.settings_manager.get_done_color()
         self.done_color_button.setStyleSheet(f"background-color: {self.done_color}")
+        
+        # Load Theme
+        current_theme = self.theme_manager.get_current_theme()
+        index = self.theme_combo.findData(current_theme)
+        if index >= 0:
+            self.theme_combo.setCurrentIndex(index)
         
         # Load app lock settings
         self.app_lock_checkbox.setChecked(self.app_security_manager.is_lock_enabled())
@@ -306,6 +375,11 @@ class UnifiedSettingsDialog(QDialog):
             # App lock settings are saved immediately by their respective methods,
             # but ensure the enabled state is consistent.
             self.app_security_manager.set_lock_enabled(self.app_lock_checkbox.isChecked())
+
+            # Save and Apply Theme
+            selected_theme = self.theme_combo.currentData()
+            if selected_theme:
+                self.theme_manager.apply_theme(selected_theme)
 
             self.accept()
         except Exception as e:

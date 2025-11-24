@@ -1,0 +1,63 @@
+2025-11-20 11:58:35,291 - root - INFO - Logging initialized. Log file: C:\Python\12.InfoMensajes-Power\logs\infomensajesapp.log
+2025-11-20 11:58:35,291 - root - INFO - Checking for database at: C:\Python\12.InfoMensajes-Power\x\database.db
+2025-11-20 11:58:35,315 - root - INFO - Checking for service script updates...
+2025-11-20 12:13:24,634 - root - INFO - Logging initialized. Log file: C:\Python\12.InfoMensajes-Power\logs\infomensajesapp.log
+2025-11-20 12:13:24,635 - root - INFO - Checking for database at: C:\Python\12.InfoMensajes-Power\x\database.db
+2025-11-20 12:13:24,644 - root - INFO - Checking for service script updates...
+2025-11-20 12:23:21,733 - root - INFO - Logging initialized. Log file: C:\Python\12.InfoMensajes-Power\logs\infomensajesapp.log
+2025-11-20 12:23:21,734 - root - INFO - Checking for database at: C:\Python\12.InfoMensajes-Power\x\database.db
+2025-11-20 12:23:21,739 - root - INFO - Checking for service script updates...
+2025-11-20 14:16:00,081 - root - INFO - Logging initialized. Log file: C:\Python\12.InfoMensajes-Power\logs\infomensajesapp.log
+2025-11-20 14:16:00,082 - root - INFO - Checking for database at: C:\Python\12.InfoMensajes-Power\x\database.db
+2025-11-20 14:16:00,087 - root - INFO - Checking for service script updates...
+2025-11-20 14:25:08,129 - root - INFO - Logging initialized. Log file: C:\Python\12.InfoMensajes-Power\logs\infomensajesapp.log
+2025-11-20 14:25:08,130 - root - INFO - Checking for database at: C:\Python\12.InfoMensajes-Power\x\database.db
+2025-11-20 14:25:08,142 - root - INFO - Checking for service script updates...
+2025-11-20 14:29:36,814 - root - INFO - Logging initialized. Log file: C:\Python\12.InfoMensajes-Power\logs\infomensajesapp.log
+2025-11-20 14:29:36,815 - root - INFO - Checking for database at: C:\Python\12.InfoMensajes-Power\x\database.db
+2025-11-20 14:29:36,823 - root - INFO - Checking for service script updates...
+2025-11-20 14:29:36,965 - root - CRITICAL - Uncaught exception:
+Traceback (most recent call last):
+  File "C:\Python\12.InfoMensajes-Power\main.py", line 117, in <module>
+    main()
+    ~~~~^^
+  File "C:\Python\12.InfoMensajes-Power\main.py", line 110, in main
+    window = MainWindow(container) # Pass container instance
+  File "C:\Python\12.InfoMensajes-Power\app\ui\main_window.py", line 81, in __init__
+    self.sidebar = Sidebar(self.service_manager_instance)
+                   ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python\12.InfoMensajes-Power\app\ui\sidebar.py", line 48, in __init__
+    self.load_services()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python\12.InfoMensajes-Power\app\ui\sidebar.py", line 120, in load_services
+    if icon_name not in self.icon_manager.icons:
+                        ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'IconManager' object has no attribute 'icons'
+
+2025-11-20 14:42:01,980 - root - INFO - Logging initialized. Log file: C:\Python\12.InfoMensajes-Power\logs\infomensajesapp.log
+2025-11-20 14:42:01,981 - root - INFO - Checking for database at: C:\Python\12.InfoMensajes-Power\x\database.db
+2025-11-20 14:42:01,999 - root - INFO - Checking for service script updates...
+2025-11-20 14:51:37,827 - root - INFO - Logging initialized. Log file: C:\Python\12.InfoMensajes-Power\logs\infomensajesapp.log
+2025-11-20 14:51:37,827 - root - INFO - Checking for database at: C:\Python\12.InfoMensajes-Power\x\database.db
+2025-11-20 14:51:37,836 - root - INFO - Checking for service script updates...
+2025-11-20 14:58:15,104 - root - INFO - Logging initialized. Log file: C:\Python\12.InfoMensajes-Power\logs\infomensajesapp.log
+2025-11-20 14:58:15,105 - root - INFO - Checking for database at: C:\Python\12.InfoMensajes-Power\x\database.db
+2025-11-20 14:58:15,111 - root - INFO - Checking for service script updates...
+2025-11-20 15:16:54,995 - root - INFO - Logging initialized. Log file: C:\Python\12.InfoMensajes-Power\logs\infomensajesapp.log
+2025-11-20 15:16:54,995 - root - INFO - Checking for database at: C:\Python\12.InfoMensajes-Power\x\database.db
+2025-11-20 15:16:55,000 - root - INFO - Checking for service script updates...
+2025-11-20 15:17:49,699 - root - INFO - Logging initialized. Log file: C:\Python\12.InfoMensajes-Power\logs\infomensajesapp.log
+2025-11-20 15:17:49,699 - root - INFO - Checking for database at: C:\Python\12.InfoMensajes-Power\x\database.db
+2025-11-20 15:17:49,705 - root - INFO - Checking for service script updates...
+2025-11-20 17:43:59,357 - root - INFO - Logging initialized. Log file: C:\Python\12.InfoMensajes-Power\logs\infomensajesapp.log
+2025-11-20 17:43:59,358 - root - INFO - Checking for database at: C:\Python\12.InfoMensajes-Power\x\database.db
+2025-11-20 17:43:59,364 - root - INFO - Checking for service script updates...
+2025-11-20 18:17:16,815 - root - INFO - Logging initialized. Log file: C:\Python\12.InfoMensajes-Power\logs\infomensajesapp.log
+2025-11-20 18:17:16,815 - root - INFO - Checking for database at: C:\Python\12.InfoMensajes-Power\x\database.db
+2025-11-20 18:17:16,825 - root - INFO - Checking for service script updates...
+2025-11-20 18:17:21,999 - root - INFO - Refreshing Gantt Chart
+2025-11-20 18:17:22,000 - root - DEBUG - Generating Gantt HTML
+2025-11-20 18:17:22,150 - root - INFO - Gantt chart reloaded successfully.
+2025-11-20 18:17:22,151 - root - INFO - Refreshing Gantt Chart
+2025-11-20 18:17:22,152 - root - DEBUG - Generating Gantt HTML
+2025-11-20 18:17:22,155 - root - INFO - Gantt chart reloaded successfully.

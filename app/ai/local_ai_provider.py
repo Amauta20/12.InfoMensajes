@@ -1,15 +1,17 @@
 import requests
 from app.ai.base_ai_provider import BaseAIProvider
 import json
+import logging
 
 class LocalAIProvider(BaseAIProvider):
     """
     Provider for local LLMs compatible with OpenAI API (e.g., LM Studio, Ollama).
     """
-    def __init__(self, api_key="lm-studio", base_url="http://localhost:1234/v1"):
+    def __init__(self, api_key="lm-studio", base_url="http://localhost:1234/v1", timeout=30):
         # API Key is often not needed for local servers but kept for compatibility
         self.api_key = api_key
         self.base_url = base_url.rstrip('/')
+        self.timeout = timeout
 
     @staticmethod
     def get_provider_name():
@@ -37,7 +39,7 @@ class LocalAIProvider(BaseAIProvider):
         }
 
         try:
-            response = requests.post(url, headers=headers, json=payload, timeout=30)
+            response = requests.post(url, headers=headers, json=payload, timeout=self.timeout)
             response.raise_for_status()
             
             data = response.json()
@@ -46,7 +48,16 @@ class LocalAIProvider(BaseAIProvider):
             else:
                 return "Error: No se recibió respuesta del modelo local."
 
+        except requests.exceptions.Timeout:
+            error_msg = f"Error: La solicitud excedió el tiempo límite de {self.timeout} segundos. Intenta aumentar el timeout en Configuración o verifica que el servidor local esté respondiendo."
+            logging.error(error_msg)
+            return error_msg
         except requests.exceptions.ConnectionError:
-            return "Error: No se pudo conectar con el servidor de IA Local. Asegúrate de que LM Studio u Ollama estén ejecutándose en el puerto 1234."
+            error_msg = "Error: No se pudo conectar con el servidor de IA Local. Asegúrate de que LM Studio u Ollama estén ejecutándose en el puerto 1234."
+            logging.error(error_msg)
+            return error_msg
         except Exception as e:
-            return f"Error al generar texto: {str(e)}"
+            error_msg = f"Error al generar texto: {str(e)}"
+            logging.error(error_msg, exc_info=True)
+            return error_msg
+

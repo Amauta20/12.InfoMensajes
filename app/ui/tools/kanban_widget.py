@@ -5,10 +5,10 @@ from PyQt6.QtGui import QColor, QFont, QAction
 from app.services_layer.kanban_service import KanbanService
 from app.db import settings_manager, database
 from app.utils import time_utils, report_utils
-from app.ui.edit_kanban_card_dialog import EditKanbanCardDialog
-from app.ui.view_kanban_card_details_dialog import ViewKanbanCardDetailsDialog
-from app.ui.add_kanban_card_dialog import AddKanbanCardDialog
-from app.ui.gantt_chart_widget import GanttChartWidget
+from app.ui.tools.edit_kanban_card_dialog import EditKanbanCardDialog
+from app.ui.tools.view_kanban_card_details_dialog import ViewKanbanCardDetailsDialog
+from app.ui.tools.add_kanban_card_dialog import AddKanbanCardDialog
+from app.ui.tools.gantt_chart_widget import GanttChartWidget
 
 class KanbanWidget(QWidget):
     kanban_updated = Signal()

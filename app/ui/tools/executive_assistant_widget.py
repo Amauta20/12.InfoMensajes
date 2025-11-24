@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QTextEdit, QPushButton,
                              QLabel, QComboBox, QHBoxLayout, QProgressBar, QMessageBox)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from app.ai.ai_manager import AIManager
+from app.ui.icon_manager import IconManager
 
 class AIWorker(QThread):
     finished = pyqtSignal(str)
@@ -23,6 +24,7 @@ class AIWorker(QThread):
 class ExecutiveAssistantWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.icon_manager = IconManager()
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(10, 10, 10, 10)
         self.layout.setSpacing(10)
@@ -38,8 +40,13 @@ class ExecutiveAssistantWidget(QWidget):
         # Quick Actions
         actions_layout = QHBoxLayout()
         self.btn_summarize = QPushButton("Resumir")
+        self.btn_summarize.setIcon(self.icon_manager.get_icon("file-alt", size=14))
+        
         self.btn_improve = QPushButton("Mejorar Texto")
+        self.btn_improve.setIcon(self.icon_manager.get_icon("magic", size=14))
+        
         self.btn_extract = QPushButton("Extraer Tareas")
+        self.btn_extract.setIcon(self.icon_manager.get_icon("tasks", size=14))
         
         for btn in [self.btn_summarize, self.btn_improve, self.btn_extract]:
             btn.setStyleSheet("""
@@ -49,6 +56,7 @@ class ExecutiveAssistantWidget(QWidget):
                     border: 1px solid #666;
                     padding: 5px 10px;
                     border-radius: 4px;
+                    text-align: left;
                 }
                 QPushButton:hover {
                     background-color: #666;
@@ -69,6 +77,7 @@ class ExecutiveAssistantWidget(QWidget):
 
         # Generate Button
         self.btn_generate = QPushButton("Procesar con IA")
+        self.btn_generate.setIcon(self.icon_manager.get_icon("robot", size=16))
         self.btn_generate.setStyleSheet("""
             QPushButton {
                 background-color: #27ae60;

@@ -1,5 +1,6 @@
 import json
 import datetime
+import logging
 from PyQt6.QtWidgets import QVBoxLayout, QWidget, QPushButton, QFileDialog
 from PyQt6.QtWebEngineCore import QWebEnginePage
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -22,7 +23,7 @@ class GanttBridge(QObject):
         """
         Slot that receives updated task data from the Gantt chart JS.
         """
-        print(f"Received update from JS: ID={task_id}, Start={start_date}, End={end_date}")
+        logging.debug(f"Received update from JS: ID={task_id}, Start={start_date}, End={end_date}")
         
         # The dates from dhtmlxGantt are in "YYYY-MM-DD HH:MM" format.
         # We need to parse them into datetime objects.
@@ -42,12 +43,12 @@ class GanttBridge(QObject):
                     new_start_date=start_date_obj,
                     new_end_date=end_date_obj
                 )
-                print(f"Successfully updated card {task_id} in the database.")
+                logging.info(f"Successfully updated card {task_id} in the database.")
             else:
-                print(f"Error: Card with ID {task_id} not found.")
+                logging.error(f"Error: Card with ID {task_id} not found.")
 
         except Exception as e:
-            print(f"Error updating card from Gantt: {e}")
+            logging.error(f"Error updating card from Gantt: {e}", exc_info=True)
 
 
 class GanttChartWidget(QWidget):
@@ -91,15 +92,15 @@ class GanttChartWidget(QWidget):
         """
         Fetches all cards from the database and reloads the Gantt chart.
         """
-        print("--- Refreshing Gantt Chart ---")
+        logging.info("Refreshing Gantt Chart")
         try:
             all_cards = self.kanban_manager.get_all_cards()
             self.tasks = self._transform_cards_to_gantt_tasks(all_cards)
             html_content = self._generate_gantt_html()
             self.web_view.setHtml(html_content)
-            print("Gantt chart reloaded successfully.")
+            logging.info("Gantt chart reloaded successfully.")
         except Exception as e:
-            print(f"--- ERROR in refresh_gantt: {e} ---")
+            logging.error(f"Error in refresh_gantt: {e}", exc_info=True)
 
     def _transform_cards_to_gantt_tasks(self, cards):
         gantt_tasks = []
@@ -164,7 +165,6 @@ class GanttChartWidget(QWidget):
 
             gantt_tasks.append(task_details)
         return gantt_tasks
-        return gantt_tasks
 
     def _get_dhtmlx_color(self, status):
         if status == "not_started":
@@ -176,7 +176,7 @@ class GanttChartWidget(QWidget):
         return "#808080" # Default grey
 
     def _generate_gantt_html(self):
-        print("--- Generating Gantt HTML ---")
+        logging.debug("Generating Gantt HTML")
         
         dhtmlx_tasks = []
         for task in self.tasks:
@@ -223,9 +223,10 @@ class GanttChartWidget(QWidget):
                     padding: 0;
                     margin: 0;
                     overflow: hidden;
+                    font-family: 'Segoe UI', sans-serif;
                 }
                 /* Make text inside tasks visible */
-                .gantt_task_text { color: #222; }
+                .gantt_task_text { color: #fff; }
 
                 /* Style for the progress bar text */
                 .gantt_task_progress_text {
@@ -235,14 +236,30 @@ class GanttChartWidget(QWidget):
                     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
                 }
 
-                /* Custom style for milestone tasks */
+                /* Custom style for milestone tasks to look like diamonds */
                 .gantt_milestone {
-                    background-color: transparent; /* Hide the default bar */
-                    border: none;
+                    background-color: #d33daf !important; /* Distinct color for milestones */
+                    border: 1px solid #a62a88;
+                    transform: rotate(45deg);
+                    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+                    border-radius: 2px;
                 }
+                
+                /* Adjust the content box for milestones so it doesn't rotate with the box if we had any */
                 .gantt_milestone .gantt_task_content {
-                    /* Hide the default content box for milestones */
                     display: none;
+                }
+
+                /* Progress bar styling */
+                .gantt_task_progress {
+                    background-color: rgba(0, 0, 0, 0.4); /* Dark overlay for progress */
+                    border-radius: 2px;
+                }
+                
+                /* Ensure the task bar itself has rounded corners */
+                .gantt_task_line {
+                    border-radius: 4px;
+                    border: none;
                 }
 
             </style>
@@ -264,6 +281,13 @@ class GanttChartWidget(QWidget):
                     gantt.config.drag_resize = true;
                     gantt.config.types.milestone = "milestone"; // Ensure milestone type is recognized
                     gantt.config.sort = true;
+                    
+                    // Adjust scale to be more readable
+                    gantt.config.scale_height = 50;
+                    gantt.config.scales = [
+                        {unit: "month", step: 1, format: "%F, %Y"},
+                        {unit: "day", step: 1, format: "%j, %D"}
+                    ];
 
                     // --- Template for progress text ---
                     gantt.templates.progress_text = function(start, end, task){
@@ -276,9 +300,14 @@ class GanttChartWidget(QWidget):
                     // --- Template for task text ---
                     gantt.templates.task_text = function(start, end, task){
                         if (task.type == 'milestone') {
-                            return "<b>" + task.text + "</b>"; // Just show name for milestones
+                            return ""; // No text inside the diamond
                         }
                         return "<b>" + task.text + "</b>";
+                    };
+                    
+                    // --- Tooltip for milestones to show name ---
+                    gantt.templates.tooltip_text = function(start, end, task){
+                        return "<b>Task:</b> "+task.text+"<br/><b>Start:</b> "+gantt.templates.tooltip_date_format(start)+"<br/><b>End:</b> "+gantt.templates.tooltip_date_format(end);
                     };
 
                     // --- Template for task CSS class ---
@@ -288,7 +317,7 @@ class GanttChartWidget(QWidget):
                             css.push("gantt_milestone");
                         }
                         if(task.progress == 1){
-                            css.push("task-completed"); // Example class
+                            css.push("task-completed"); 
                         }
                         return css.join(" ");
                     };
@@ -324,13 +353,13 @@ class GanttChartWidget(QWidget):
         try:
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(html_content)
-            print(f"Gantt chart exported to {file_path}")
+            logging.info(f"Gantt chart exported to {file_path}")
         except Exception as e:
-            print(f"Error exporting Gantt chart: {e}")
+            logging.error(f"Error exporting Gantt chart: {e}", exc_info=True)
 
     def export_to_png(self):
         file_path, _ = QFileDialog.getSaveFileName(self, "Export Gantt Chart to PNG", "", "PNG Files (*.png);;All Files (*)")
         if file_path:
             pixmap = self.web_view.grab()
             pixmap.save(file_path, 'png')
-            print(f"Gantt chart exported to {file_path}")
+            logging.info(f"Gantt chart exported to {file_path}")

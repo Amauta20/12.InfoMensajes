@@ -3,8 +3,8 @@ from PyQt6.QtCore import Qt, pyqtSignal, QDateTime
 from app.services_layer.reminders_service import RemindersService
 from app.db.settings_manager import SettingsManager
 from app.utils import time_utils
-from app.ui.add_reminder_dialog import AddReminderDialog
-from app.ui.edit_reminder_dialog import EditReminderDialog
+from app.ui.tools.add_reminder_dialog import AddReminderDialog
+from app.ui.tools.edit_reminder_dialog import EditReminderDialog
 
 class AgendaWidget(QWidget):
     agenda_updated = pyqtSignal()
